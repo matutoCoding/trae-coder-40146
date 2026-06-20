@@ -1,0 +1,49 @@
+@use '@/styles/variables.scss' as *;
+
+.statusTag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-sm;
+  font-weight: $font-weight-medium;
+  white-space: nowrap;
+
+  &.small {
+    padding: 4rpx 12rpx;
+    font-size: $font-size-xs;
+  }
+
+  &.medium {
+    padding: 6rpx 16rpx;
+    font-size: $font-size-sm;
+  }
+}
+
+.primary {
+  background: rgba(255, 107, 53, 0.1);
+  color: $color-primary;
+}
+
+.success {
+  background: rgba(0, 180, 42, 0.1);
+  color: $color-success;
+}
+
+.warning {
+  background: rgba(255, 125, 0, 0.1);
+  color: $color-warning;
+}
+
+.error {
+  background: rgba(245, 63, 63, 0.1);
+  color: $color-error;
+}
+
+.info {
+  background: rgba(22, 93, 255, 0.1);
+  color: $color-info;
+}
+
+.tagText {
+  font-size: inherit;
+}

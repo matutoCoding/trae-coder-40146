@@ -1,0 +1,271 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background: $color-bg-page;
+  padding-bottom: 160rpx;
+}
+
+.header {
+  background: linear-gradient(135deg, $color-secondary 0%, $color-secondary-light 100%);
+  padding: $spacing-xl $page-padding $spacing-lg;
+  text-align: center;
+}
+
+.statusBadge {
+  display: inline-flex;
+  padding: 6rpx 20rpx;
+  border-radius: $radius-button;
+  background: rgba(255, 255, 255, 0.2);
+  margin-bottom: $spacing-md;
+}
+
+.statusBadgeText {
+  font-size: $font-size-sm;
+  color: $color-text-white;
+  font-weight: $font-weight-medium;
+}
+
+.amountLabel {
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: $spacing-xs;
+}
+
+.amountValue {
+  font-size: 64rpx;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+}
+
+.billNo {
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: $spacing-md;
+  font-family: monospace;
+}
+
+.section {
+  margin: $spacing-md $page-padding;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+}
+
+.itemList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.billItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: $spacing-md;
+  border-bottom: 1rpx dashed $color-divider;
+
+  &:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+}
+
+.itemInfo {
+  flex: 1;
+  margin-right: $spacing-md;
+}
+
+.itemName {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+  margin-bottom: 4rpx;
+}
+
+.itemDesc {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.itemAmount {
+  text-align: right;
+}
+
+.itemPrice {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+}
+
+.itemQuantity {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+}
+
+.discountList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.discountItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-sm 0;
+}
+
+.discountInfo {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.discountTag {
+  padding: 2rpx 8rpx;
+  border-radius: 4rpx;
+  background: rgba(255, 107, 53, 0.1);
+}
+
+.discountTagText {
+  font-size: $font-size-xs;
+  color: $color-primary;
+}
+
+.discountName {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.discountAmount {
+  font-size: $font-size-sm;
+  color: $color-error;
+  font-weight: $font-weight-medium;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-sm;
+
+  &.total {
+    padding-top: $spacing-md;
+    margin-top: $spacing-md;
+    border-top: 1rpx solid $color-divider;
+  }
+}
+
+.summaryLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.summaryValue {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+
+  &.total {
+    font-size: $font-size-xl;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+  }
+}
+
+.infoList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.infoItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.infoLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.infoValue {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  text-align: right;
+}
+
+.bottomBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: $color-bg-card;
+  padding: $spacing-md $page-padding;
+  padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
+  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.08);
+  display: flex;
+  gap: $spacing-md;
+  align-items: center;
+}
+
+.totalInfo {
+  flex: 1;
+}
+
+.totalLabel {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  margin-bottom: 4rpx;
+}
+
+.totalPrice {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-primary;
+}
+
+.payBtn {
+  flex: 1;
+  height: 88rpx;
+  border-radius: $radius-button;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 16rpx rgba(255, 107, 53, 0.3);
+  transition: all $transition-base;
+
+  &:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+  }
+}
+
+.payBtnText {
+  font-size: $font-size-lg;
+  color: $color-text-white;
+  font-weight: $font-weight-semibold;
+}
+
+.remarkBox {
+  padding: $spacing-md;
+  background: $color-bg-hover;
+  border-radius: $radius-md;
+}
+
+.remarkText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-normal;
+}

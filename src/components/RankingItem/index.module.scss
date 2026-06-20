@@ -1,0 +1,117 @@
+@use '@/styles/variables.scss' as *;
+
+.item {
+  display: flex;
+  align-items: center;
+  padding: $spacing-md $spacing-lg;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+  transition: all $transition-base;
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.rank {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: $spacing-md;
+  border-radius: $radius-md;
+  background: $color-bg-hover;
+
+  &.rank1 {
+    background: linear-gradient(135deg, #FFD700 0%, #FFB300 100%);
+  }
+
+  &.rank2 {
+    background: linear-gradient(135deg, #E0E0E0 0%, #A0A0A0 100%);
+  }
+
+  &.rank3 {
+    background: linear-gradient(135deg, #CD7F32 0%, #8B4513 100%);
+  }
+}
+
+.rankBadge {
+  font-size: 36rpx;
+}
+
+.rankNum {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $color-text-secondary;
+}
+
+.playerInfo {
+  flex: 1;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-xs;
+}
+
+.name {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.level {
+  padding: 2rpx 10rpx;
+  border-radius: $radius-xs;
+  background: rgba(255, 107, 53, 0.1);
+}
+
+.levelText {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.stats {
+  display: flex;
+  gap: $spacing-lg;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2rpx;
+}
+
+.statLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.statValue {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  font-weight: $font-weight-medium;
+}
+
+.points {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4rpx;
+}
+
+.pointsValue {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-primary;
+}
+
+.pointsLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}

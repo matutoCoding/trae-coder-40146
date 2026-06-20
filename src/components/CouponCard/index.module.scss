@@ -1,0 +1,115 @@
+@use '@/styles/variables.scss' as *;
+
+.card {
+  display: flex;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  overflow: hidden;
+  box-shadow: $shadow-card;
+  border-left: 8rpx solid $color-primary;
+  transition: all $transition-base;
+  position: relative;
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &.selected {
+    box-shadow: 0 0 0 2rpx $color-primary, $shadow-card;
+  }
+
+  &.disabled {
+    opacity: 0.6;
+  }
+}
+
+.left {
+  width: 200rpx;
+  padding: $spacing-lg;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 107, 53, 0.05) 100%);
+}
+
+.valueRow {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: $spacing-xs;
+}
+
+.currency {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $color-primary;
+}
+
+.value {
+  font-size: 56rpx;
+  font-weight: $font-weight-bold;
+  color: $color-primary;
+  line-height: 1;
+}
+
+.unit {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-primary;
+  margin-left: 4rpx;
+}
+
+.typeLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.right {
+  flex: 1;
+  padding: $spacing-lg;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: $spacing-xs;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.name {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  @include text-ellipsis;
+  flex: 1;
+  margin-right: $spacing-sm;
+}
+
+.desc {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  @include text-ellipsis-multi(1);
+}
+
+.condition {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.validity {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.selectedMark {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-top: 40rpx solid $color-primary;
+  border-left: 40rpx solid transparent;
+}

@@ -1,0 +1,332 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background: $color-bg-page;
+  padding-bottom: 120rpx;
+}
+
+.tabBar {
+  display: flex;
+  background: $color-bg-card;
+  padding: $spacing-xs;
+  margin: $spacing-md $page-padding;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+}
+
+.tabItem {
+  flex: 1;
+  text-align: center;
+  padding: $spacing-sm 0;
+  border-radius: $radius-md;
+  transition: all $transition-base;
+
+  &.active {
+    background: $color-primary;
+
+    .tabText {
+      color: $color-text-white;
+      font-weight: $font-weight-semibold;
+    }
+  }
+
+  &:active {
+    transform: scale(0.96);
+  }
+}
+
+.tabText {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+}
+
+.summaryCard {
+  margin: $spacing-md $page-padding;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: 0 4rpx 16rpx rgba(255, 107, 53, 0.2);
+}
+
+.summaryTitle {
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: $spacing-xs;
+}
+
+.summaryAmount {
+  font-size: 48rpx;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+  margin-bottom: $spacing-md;
+}
+
+.summaryStats {
+  display: flex;
+  justify-content: space-between;
+}
+
+.summaryStat {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.summaryStatValue {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-white;
+}
+
+.summaryStatLabel {
+  font-size: $font-size-xs;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.filterBar {
+  display: flex;
+  gap: $spacing-sm;
+  padding: 0 $page-padding;
+  margin-bottom: $spacing-md;
+  overflow-x: auto;
+
+  @include scroll-x-container;
+}
+
+.filterItem {
+  @include scroll-x-item(auto);
+  padding: $spacing-sm $spacing-lg;
+  border-radius: $radius-button;
+  background: $color-bg-card;
+  box-shadow: $shadow-card;
+  white-space: nowrap;
+  transition: all $transition-fast;
+
+  &.active {
+    background: $color-secondary;
+
+    .filterText {
+      color: $color-text-white;
+    }
+  }
+
+  &:active {
+    transform: scale(0.96);
+  }
+}
+
+.filterText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.billList {
+  padding: 0 $page-padding;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.sectionTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  padding: $spacing-sm $page-padding;
+}
+
+.leagueCard {
+  margin: $spacing-md $page-padding;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.leagueHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: $spacing-md;
+}
+
+.leagueInfo {
+  flex: 1;
+}
+
+.leagueName {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-xs;
+}
+
+.leagueDate {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.leagueStatus {
+  padding: 4rpx 12rpx;
+  border-radius: $radius-xs;
+  background: rgba(0, 180, 42, 0.1);
+}
+
+.leagueStatusText {
+  font-size: $font-size-xs;
+  color: $color-success;
+  font-weight: $font-weight-medium;
+}
+
+.leagueStats {
+  display: flex;
+  justify-content: space-around;
+  padding-top: $spacing-md;
+  border-top: 1rpx solid $color-divider;
+}
+
+.leagueStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.leagueStatValue {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-primary;
+}
+
+.leagueStatLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.rankingList {
+  padding: 0 $page-padding;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
+}
+
+.podiumSection {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: $spacing-md;
+  padding: $spacing-lg 0;
+  margin-bottom: $spacing-md;
+}
+
+.podiumItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+
+  &.first {
+    order: 2;
+
+    .podiumAvatar {
+      width: 120rpx;
+      height: 120rpx;
+      border-width: 4rpx;
+      border-color: #FFD700;
+    }
+
+    .podiumRank {
+      background: linear-gradient(135deg, #FFD700 0%, #FFB300 100%);
+    }
+  }
+
+  &.second {
+    order: 1;
+
+    .podiumAvatar {
+      width: 100rpx;
+      height: 100rpx;
+    }
+
+    .podiumRank {
+      background: linear-gradient(135deg, #E0E0E0 0%, #A0A0A0 100%);
+    }
+  }
+
+  &.third {
+    order: 3;
+
+    .podiumAvatar {
+      width: 100rpx;
+      height: 100rpx;
+    }
+
+    .podiumRank {
+      background: linear-gradient(135deg, #CD7F32 0%, #8B4513 100%);
+    }
+  }
+}
+
+.podiumAvatar {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  background: $color-bg-hover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid $color-border;
+}
+
+.podiumAvatarText {
+  font-size: 36rpx;
+}
+
+.podiumName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  @include text-ellipsis;
+  max-width: 160rpx;
+}
+
+.podiumPoints {
+  font-size: $font-size-sm;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.podiumRank {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: -24rpx;
+}
+
+.podiumRankText {
+  font-size: $font-size-sm;
+  color: $color-text-white;
+  font-weight: $font-weight-bold;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 0;
+}
+
+.emptyIcon {
+  font-size: 80rpx;
+  margin-bottom: $spacing-md;
+}
+
+.emptyText {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+}

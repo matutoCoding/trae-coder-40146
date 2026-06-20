@@ -1,0 +1,228 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background: $color-bg-page;
+  padding-bottom: 160rpx;
+}
+
+.header {
+  background: linear-gradient(135deg, $color-secondary 0%, $color-secondary-light 100%);
+  padding: $spacing-xl $page-padding $spacing-lg;
+  color: $color-text-white;
+}
+
+.machineName {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  margin-bottom: $spacing-sm;
+}
+
+.machineCode {
+  font-size: $font-size-sm;
+  opacity: 0.8;
+  margin-bottom: $spacing-md;
+}
+
+.machineInfoRow {
+  display: flex;
+  gap: $spacing-lg;
+  margin-top: $spacing-md;
+}
+
+.machineInfoItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.machineInfoLabel {
+  font-size: $font-size-xs;
+  opacity: 0.7;
+}
+
+.machineInfoValue {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+}
+
+.statusBadge {
+  display: inline-flex;
+  padding: 6rpx 16rpx;
+  border-radius: $radius-button;
+  background: rgba(0, 180, 42, 0.2);
+}
+
+.statusBadgeText {
+  font-size: $font-size-sm;
+  color: $color-success;
+  font-weight: $font-weight-medium;
+}
+
+.section {
+  margin: $spacing-md $page-padding;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+}
+
+.descText {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+}
+
+.timeSlots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.slotItem {
+  width: calc((100% - 48rpx) / 4);
+  padding: $spacing-sm 0;
+  text-align: center;
+  border-radius: $radius-md;
+  background: $color-bg-hover;
+  transition: all $transition-fast;
+
+  &.available {
+    background: rgba(0, 180, 42, 0.1);
+
+    .slotTime {
+      color: $color-success;
+    }
+  }
+
+  &.occupied {
+    background: rgba(245, 63, 63, 0.1);
+
+    .slotTime {
+      color: $color-error;
+    }
+  }
+
+  &.selected {
+    background: $color-primary;
+
+    .slotTime {
+      color: $color-text-white;
+    }
+  }
+
+  &:active {
+    transform: scale(0.96);
+  }
+}
+
+.slotTime {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.priceSection {
+  text-align: center;
+}
+
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.priceValue {
+  font-size: 56rpx;
+  font-weight: $font-weight-bold;
+  color: $color-primary;
+}
+
+.priceUnit {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+}
+
+.bottomBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: $color-bg-card;
+  padding: $spacing-md $page-padding;
+  padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
+  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.08);
+  display: flex;
+  gap: $spacing-md;
+  align-items: center;
+}
+
+.totalInfo {
+  flex: 1;
+}
+
+.totalLabel {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  margin-bottom: 4rpx;
+}
+
+.totalPrice {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-primary;
+}
+
+.bookBtn {
+  flex: 1;
+  height: 88rpx;
+  border-radius: $radius-button;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 16rpx rgba(255, 107, 53, 0.3);
+  transition: all $transition-base;
+
+  &:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+  }
+}
+
+.bookBtnText {
+  font-size: $font-size-lg;
+  color: $color-text-white;
+  font-weight: $font-weight-semibold;
+}
+
+.slotLegend {
+  display: flex;
+  gap: $spacing-lg;
+  margin-bottom: $spacing-md;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.legendDot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 4rpx;
+}
+
+.legendText {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
