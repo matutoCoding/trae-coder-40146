@@ -238,3 +238,122 @@
   border: none;
   outline: none;
 }
+
+.editForm {
+  padding-top: $spacing-sm;
+}
+
+.timeSlotSection {
+  margin-top: $spacing-md;
+  padding-top: $spacing-md;
+  border-top: 1rpx solid $color-divider;
+}
+
+.sectionSubTitle {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  font-weight: $font-weight-medium;
+  margin-bottom: $spacing-sm;
+}
+
+.slotGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.slotChip {
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-md;
+  background: $color-bg-hover;
+  border: 2rpx solid transparent;
+  transition: all $transition-fast;
+
+  &.active {
+    background: rgba($color-primary, 0.1);
+    border-color: $color-primary;
+  }
+
+  &:active {
+    transform: scale(0.96);
+  }
+}
+
+.slotChipText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+
+  .active & {
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+  }
+}
+
+.timePickerRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md 0;
+  border-bottom: 1rpx solid $color-divider;
+  margin-bottom: $spacing-sm;
+}
+
+.timePickerItem {
+  flex: 1;
+}
+
+.timePickerLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-bottom: $spacing-xs;
+  display: block;
+}
+
+.timePickerDisplay {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  background: $color-bg-hover;
+  border-radius: $radius-md;
+}
+
+.timePickerValue {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.timePickerArrow {
+  font-size: $font-size-lg;
+  color: $color-text-tertiary;
+}
+
+.timePickerDivider {
+  padding-top: $spacing-lg;
+}
+
+.timePickerDividerText {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.previewRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-sm 0 $spacing-md;
+  border-bottom: 1rpx solid $color-divider;
+  margin-bottom: $spacing-sm;
+}
+
+.previewLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.previewValue {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+}

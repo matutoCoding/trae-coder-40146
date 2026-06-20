@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, Input } from '@tarojs/components';
+import { View, Text, ScrollView, Input, Picker } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
-import { PeriodRule, Booking, WEEKDAY_LABEL, Weekday } from '@/types/booking';
+import { PeriodRule, Booking, WEEKDAY_LABEL, Weekday, BookingStatus } from '@/types/booking';
 import { mockMachines } from '@/data/machines';
 import BookingCard from '@/components/BookingCard';
 import { getWeekdayLabel, formatDate, generatePeriodDates, calculateHours } from '@/utils/date';
@@ -10,11 +10,23 @@ import styles from './index.module.scss';
 
 type TabType = 'rules' | 'bookings';
 
+const TIME_HOURS = ['10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22'];
+const TIME_MINS = ['00', '30'];
+
 const BookingPage: React.FC = () => {
-  const { bookings, rules, addBookings, addRule, updateRule } = useAppStore();
+  const { bookings, rules, addBookings, addRule, updateRule, updateBookingsByRule, machines } = useAppStore();
   const [activeTab, setActiveTab] = useState<TabType>('rules');
   const [showModal, setShowModal] = useState<boolean>(false);
   const [editingRule, setEditingRule] = useState<PeriodRule | null>(null);
+
+  const [showBatchModal, setShowBatchModal] = useState<boolean>(false);
+  const [batchRule, setBatchRule] = useState<PeriodRule | null>(null);
+  const [batchForm, setBatchForm] = useState({
+    startTime: '19:00',
+    endTime: '21:00',
+    machineId: '',
+    onlyFuture: true
+  });
 
   const [formData, setFormData] = useState({
     name: '',
@@ -93,6 +105,57 @@ const BookingPage: React.FC = () => {
     setShowModal(true);
     console.log('[BookingPage] 编辑周期规则:', rule.id);
   }, []);
+
+  const handleBatchAdjust = useCallback((rule: PeriodRule) => {
+    setBatchRule(rule);
+    setBatchForm({
+      startTime: rule.startTime,
+      endTime: rule.endTime,
+      machineId: rule.machineId,
+      onlyFuture: true
+    });
+    setShowBatchModal(true);
+    console.log('[BookingPage] 批量调整:', rule.id);
+  }, []);
+
+  const handleBatchSave = useCallback(() => {
+    if (!batchRule) return;
+
+    const machine = machines.find(m => m.id === batchForm.machineId);
+    const hours = calculateHours(batchForm.startTime, batchForm.endTime);
+    const pricePerHour = machine?.pricePerHour || 50;
+
+    const updates: Partial<Booking> = {
+      startTime: batchForm.startTime,
+      endTime: batchForm.endTime,
+      machineId: batchForm.machineId,
+      machineName: machine?.name || batchRule.machineName,
+      totalHours: hours,
+      originalAmount: Math.round(hours * pricePerHour * 100) / 100,
+      finalAmount: Math.round(hours * pricePerHour * 100) / 100
+    };
+
+    const result = updateBookingsByRule(
+      batchRule.id,
+      updates,
+      { onlyFuture: batchForm.onlyFuture, skipConflict: true }
+    );
+
+    setShowBatchModal(false);
+
+    if (result.conflicts > 0 || result.skipped > 0) {
+      Taro.showModal({
+        title: '批量调整完成',
+        content: `成功更新${result.updated}条\n跳过${result.skipped + result.conflicts}条（已过期/已完成/冲突）`,
+        showCancel: false
+      });
+    } else {
+      Taro.showToast({
+        title: `已更新${result.updated}条`,
+        icon: 'success'
+      });
+    }
+  }, [batchRule, batchForm, machines, updateBookingsByRule]);
 
   const handleGenerateBookings = useCallback(
     (rule: PeriodRule) => {
@@ -202,6 +265,35 @@ const BookingPage: React.FC = () => {
     });
   }, []);
 
+  const handleBatchStartTimeChange = useCallback((e: any) => {
+    const [h, m] = e.detail.value;
+    setBatchForm(prev => ({ ...prev, startTime: `${TIME_HOURS[h]}:${TIME_MINS[m]}` }));
+  }, []);
+
+  const handleBatchEndTimeChange = useCallback((e: any) => {
+    const [h, m] = e.detail.value;
+    setBatchForm(prev => ({ ...prev, endTime: `${TIME_HOURS[h]}:${TIME_MINS[m]}` }));
+  }, []);
+
+  const handleBatchMachineSelect = useCallback(() => {
+    const options = machines.map(m => `${m.code} ${m.name}`);
+    Taro.showActionSheet({
+      itemList: options,
+      success: res => {
+        const selected = machines[res.tapIndex];
+        if (selected) {
+          setBatchForm(prev => ({ ...prev, machineId: selected.id }));
+        }
+      }
+    });
+  }, [machines]);
+
+  const batchStartH = TIME_HOURS.indexOf(batchForm.startTime.split(':')[0]);
+  const batchStartM = TIME_MINS.indexOf(batchForm.startTime.split(':')[1]);
+  const batchEndH = TIME_HOURS.indexOf(batchForm.endTime.split(':')[0]);
+  const batchEndM = TIME_MINS.indexOf(batchForm.endTime.split(':')[1]);
+  const batchMachineName = machines.find(m => m.id === batchForm.machineId)?.name || '选择镖机';
+
   const tabs = [
     { key: 'rules' as TabType, label: '周期规则' },
     { key: 'bookings' as TabType, label: '预订列表' }
@@ -273,7 +365,13 @@ const BookingPage: React.FC = () => {
                           className={styles.actionBtn}
                           onClick={() => handleEditRule(rule)}
                         >
-                          <Text className={styles.actionBtnText}>编辑</Text>
+                          <Text className={styles.actionBtnText}>编辑规则</Text>
+                        </View>
+                        <View
+                          className={styles.actionBtn}
+                          onClick={() => handleBatchAdjust(rule)}
+                        >
+                          <Text className={styles.actionBtnText}>批量调整</Text>
                         </View>
                         <View
                           className={`${styles.actionBtn} ${styles.primary}`}
@@ -454,6 +552,77 @@ const BookingPage: React.FC = () => {
               <Text className={styles.submitBtnText}>
                 {editingRule ? '保存修改' : '创建规则'}
               </Text>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {showBatchModal && batchRule && (
+        <View className={styles.formModal} onClick={() => setShowBatchModal(false)}>
+          <View className={styles.modalContent} onClick={e => e.stopPropagation()}>
+            <View className={styles.modalHeader}>
+              <Text className={styles.modalTitle}>批量调整预订</Text>
+              <View className={styles.modalClose} onClick={() => setShowBatchModal(false)}>
+                <Text className={styles.modalCloseText}>✕</Text>
+              </View>
+            </View>
+
+            <Text style={{ fontSize: '24rpx', color: '#86909C', marginBottom: '24rpx', display: 'block' }}>
+              规则：{batchRule.name}
+            </Text>
+
+            <View className={styles.formItem}>
+              <Text className={styles.formLabel}>开始时间</Text>
+              <Picker
+                mode="multiSelector"
+                range={[TIME_HOURS, TIME_MINS]}
+                value={[batchStartH >= 0 ? batchStartH : 0, batchStartM >= 0 ? batchStartM : 0]}
+                onChange={handleBatchStartTimeChange}
+              >
+                <View className={styles.pickerDisplay}>
+                  <Text className={styles.pickerText}>{batchForm.startTime}</Text>
+                  <Text className={styles.pickerArrow}>›</Text>
+                </View>
+              </Picker>
+            </View>
+
+            <View className={styles.formItem}>
+              <Text className={styles.formLabel}>结束时间</Text>
+              <Picker
+                mode="multiSelector"
+                range={[TIME_HOURS, TIME_MINS]}
+                value={[batchEndH >= 0 ? batchEndH : 0, batchEndM >= 0 ? batchEndM : 0]}
+                onChange={handleBatchEndTimeChange}
+              >
+                <View className={styles.pickerDisplay}>
+                  <Text className={styles.pickerText}>{batchForm.endTime}</Text>
+                  <Text className={styles.pickerArrow}>›</Text>
+                </View>
+              </Picker>
+            </View>
+
+            <View className={styles.formItem} onClick={handleBatchMachineSelect}>
+              <Text className={styles.formLabel}>镖机</Text>
+              <View className={styles.pickerDisplay}>
+                <Text className={styles.pickerText}>{batchMachineName}</Text>
+                <Text className={styles.pickerArrow}>›</Text>
+              </View>
+            </View>
+
+            <View className={styles.formItem}>
+              <View className={styles.switchRow} onClick={() => setBatchForm(prev => ({ ...prev, onlyFuture: !prev.onlyFuture }))}>
+                <Text className={styles.formLabel}>只调整未开始的预订</Text>
+                <View className={`${styles.switchBtn} ${batchForm.onlyFuture ? styles.on : ''}`}>
+                  <View className={styles.switchDot} />
+                </View>
+              </View>
+              <Text style={{ fontSize: '22rpx', color: '#C9CDD4', marginTop: '8rpx', display: 'block' }}>
+                已完成、已取消和已过期的预订不会被修改
+              </Text>
+            </View>
+
+            <View className={styles.submitBtn} onClick={handleBatchSave}>
+              <Text className={styles.submitBtnText}>确认批量调整</Text>
             </View>
           </View>
         </View>

@@ -450,3 +450,64 @@
   color: $color-text-white;
   font-weight: $font-weight-semibold;
 }
+
+.pickerDisplay {
+  width: 100%;
+  height: 88rpx;
+  padding: 0 $spacing-md;
+  border: 2rpx solid $color-border;
+  border-radius: $radius-md;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  background: $color-bg-card;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pickerText {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.pickerArrow {
+  font-size: $font-size-lg;
+  color: $color-text-tertiary;
+}
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm 0;
+}
+
+.switchBtn {
+  width: 100rpx;
+  height: 56rpx;
+  border-radius: 28rpx;
+  background: $color-bg-disabled;
+  position: relative;
+  transition: all $transition-fast;
+
+  &.on {
+    background: $color-primary;
+  }
+}
+
+.switchDot {
+  position: absolute;
+  top: 4rpx;
+  left: 4rpx;
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background: #fff;
+  transition: all $transition-fast;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.15);
+
+  .on & {
+    left: 48rpx;
+  }
+}

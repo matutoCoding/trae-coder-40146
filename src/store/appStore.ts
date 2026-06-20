@@ -4,6 +4,7 @@ import { mockPeriodRules, mockBookings } from '@/data/bookings';
 import { mockBills } from '@/data/bills';
 import { mockMachines } from '@/data/machines';
 import { Machine } from '@/types/machine';
+import { formatDate } from '@/utils/date';
 
 class AppStore {
   private bookings: Booking[] = [...mockBookings];
@@ -134,6 +135,75 @@ class AppStore {
         parseInt(startTime) < parseInt(b.endTime) &&
         parseInt(endTime) > parseInt(b.startTime)
     );
+  }
+
+  getBookingsByRule(ruleId: string): Booking[] {
+    return this.bookings.filter(b => b.ruleId === ruleId);
+  }
+
+  updateBookingsByRule(
+    ruleId: string,
+    updates: Partial<Booking>,
+    options: { onlyFuture?: boolean; skipConflict?: boolean } = {}
+  ): { updated: number; skipped: number; conflicts: number } {
+    const { onlyFuture = true, skipConflict = false } = options;
+    const now = new Date();
+    const today = formatDate(now);
+    const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    let updatedCount = 0;
+    let skippedCount = 0;
+    let conflictCount = 0;
+
+    const isBookingPast = (b: Booking): boolean => {
+      if (b.date < today) return true;
+      if (b.date === today && b.endTime <= nowTime) return true;
+      return false;
+    };
+
+    this.bookings = this.bookings.map(b => {
+      if (b.ruleId !== ruleId) return b;
+
+      if (onlyFuture && (b.status === 'completed' || b.status === 'cancelled' || isBookingPast(b))) {
+        skippedCount++;
+        return b;
+      }
+
+      if (skipConflict) {
+        const newMachineId = updates.machineId || b.machineId;
+        const newDate = updates.date || b.date;
+        const newStartTime = updates.startTime || b.startTime;
+        const newEndTime = updates.endTime || b.endTime;
+
+        const conflict = this.bookings.find(
+          other =>
+            other.id !== b.id &&
+            other.machineId === newMachineId &&
+            other.date === newDate &&
+            other.status !== 'cancelled' &&
+            parseInt(newStartTime) < parseInt(other.endTime) &&
+            parseInt(newEndTime) > parseInt(other.startTime)
+        );
+
+        if (conflict) {
+          conflictCount++;
+          return b;
+        }
+      }
+
+      updatedCount++;
+      return { ...b, ...updates };
+    });
+
+    this.notify();
+    console.log('[AppStore] 批量更新预订', {
+      规则: ruleId,
+      更新数: updatedCount,
+      跳过数: skippedCount,
+      冲突数: conflictCount
+    });
+
+    return { updated: updatedCount, skipped: skippedCount, conflicts: conflictCount };
   }
 }
 

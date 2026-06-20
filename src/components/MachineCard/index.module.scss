@@ -83,3 +83,43 @@
   @include text-ellipsis-multi(1);
   line-height: $line-height-normal;
 }
+
+.slotOverview {
+  margin-bottom: $spacing-md;
+  padding-bottom: $spacing-md;
+  border-bottom: 1rpx solid $color-divider;
+}
+
+.slotBar {
+  display: flex;
+  height: 16rpx;
+  border-radius: 8rpx;
+  overflow: hidden;
+  gap: 2rpx;
+  margin-bottom: $spacing-xs;
+  background: $color-bg-hover;
+}
+
+.slotBarItem {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+
+  &.idle {
+    background: rgba(0, 180, 42, 0.25);
+  }
+
+  &.occupied {
+    background: $color-error;
+  }
+}
+
+.slotLegend {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.slotLegendText {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}

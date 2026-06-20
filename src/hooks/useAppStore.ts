@@ -59,6 +59,18 @@ export const useAppStore = () => {
     []
   );
 
+  const getBookingsByRule = useCallback((ruleId: string) => {
+    return appStore.getBookingsByRule(ruleId);
+  }, []);
+
+  const updateBookingsByRule = useCallback((
+    ruleId: string,
+    updates: Partial<Booking>,
+    options?: { onlyFuture?: boolean; skipConflict?: boolean }
+  ) => {
+    return appStore.updateBookingsByRule(ruleId, updates, options);
+  }, []);
+
   return {
     bookings,
     rules,
@@ -72,6 +84,8 @@ export const useAppStore = () => {
     getMachineById,
     addRule,
     updateRule,
-    checkConflict
+    checkConflict,
+    getBookingsByRule,
+    updateBookingsByRule
   };
 };

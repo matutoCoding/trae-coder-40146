@@ -94,13 +94,19 @@ export const generatePeriodDates = (
 };
 
 export const calculateHours = (startTime: string, endTime: string): number => {
-  const [startHour, startMin] = startTime.split(':').map(Number);
-  const [endHour, endMin] = endTime.split(':').map(Number);
+  const safeParse = (timeStr: string): number => {
+    if (!timeStr || typeof timeStr !== 'string') return 0;
+    const cleaned = timeStr.replace(/[：]/g, ':').trim();
+    const parts = cleaned.split(':');
+    if (parts.length === 0) return 0;
+    const hour = parseInt(parts[0]) || 0;
+    const min = parts.length > 1 ? parseInt(parts[1]) || 0 : 0;
+    return hour + min / 60;
+  };
 
-  const startTotal = startHour + startMin / 60;
-  const endTotal = endHour + endMin / 60;
-
-  return Math.max(0, endTotal - startTotal);
+  const startTotal = safeParse(startTime);
+  const endTotal = safeParse(endTime);
+  return Math.max(0, Math.round((endTotal - startTotal) * 100) / 100);
 };
 
 export const formatTime = (date: Date): string => {

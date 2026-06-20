@@ -1,14 +1,24 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, Input } from '@tarojs/components';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { View, Text, ScrollView, Input, Picker } from '@tarojs/components';
 import Taro, { useRouter, useDidShow } from '@tarojs/taro';
 import { Booking, BOOKING_STATUS_LABEL, BookingStatus } from '@/types/booking';
-import { Bill, DiscountDetail } from '@/types/bill';
 import { getWeekdayLabel, formatDate, calculateHours } from '@/utils/date';
 import { useAppStore } from '@/hooks/useAppStore';
-import { mockMachines } from '@/data/machines';
 import { mockCoupons } from '@/data/coupons';
 import { COUPON_TYPE_LABEL } from '@/types/coupon';
 import styles from './index.module.scss';
+
+const COMMON_TIME_SLOTS = [
+  { start: '10:00', end: '12:00', label: '上午场 10-12点' },
+  { start: '13:00', end: '15:00', label: '下午场 13-15点' },
+  { start: '15:00', end: '17:00', label: '下午场 15-17点' },
+  { start: '19:00', end: '21:00', label: '晚间场 19-21点' },
+  { start: '19:00', end: '22:00', label: '晚间场 19-22点' },
+  { start: '20:00', end: '22:00', label: '晚间场 20-22点' },
+];
+
+const TIME_OPTIONS_HOUR = ['10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22'];
+const TIME_OPTIONS_MINUTE = ['00', '30'];
 
 const BookingDetailPage: React.FC = () => {
   const router = useRouter();
@@ -59,6 +69,22 @@ const BookingDetailPage: React.FC = () => {
     console.log('[BookingDetail] 页面显示');
   });
 
+  const previewHours = useMemo(() => {
+    return calculateHours(editForm.startTime, editForm.endTime);
+  }, [editForm.startTime, editForm.endTime]);
+
+  const previewPrice = useMemo(() => {
+    if (!booking) return '0.00';
+    const machine = getMachineById(editForm.machineId);
+    const pricePerHour = machine?.pricePerHour || 50;
+    return (previewHours * pricePerHour).toFixed(2);
+  }, [booking, editForm.machineId, previewHours, getMachineById]);
+
+  const startHourIndex = TIME_OPTIONS_HOUR.indexOf(editForm.startTime?.split(':')[0] || '19');
+  const startMinIndex = TIME_OPTIONS_MINUTE.indexOf(editForm.startTime?.split(':')[1] || '00');
+  const endHourIndex = TIME_OPTIONS_HOUR.indexOf(editForm.endTime?.split(':')[0] || '21');
+  const endMinIndex = TIME_OPTIONS_MINUTE.indexOf(editForm.endTime?.split(':')[1] || '00');
+
   const getStatusText = (status: string) => {
     switch (status) {
       case 'confirmed':
@@ -108,6 +134,12 @@ const BookingDetailPage: React.FC = () => {
       return;
     }
 
+    const hours = calculateHours(editForm.startTime, editForm.endTime);
+    if (hours <= 0) {
+      Taro.showToast({ title: '结束时间需晚于开始时间', icon: 'none' });
+      return;
+    }
+
     const conflict = checkConflict(
       editForm.machineId,
       editForm.date,
@@ -125,9 +157,8 @@ const BookingDetailPage: React.FC = () => {
     }
 
     const machine = getMachineById(editForm.machineId);
-    const hours = calculateHours(editForm.startTime, editForm.endTime);
     const originalAmount = Math.round(hours * (machine?.pricePerHour || 50) * 100) / 100;
-    const discountRate = booking.discountAmount > 0 ? booking.discountAmount / booking.originalAmount : 0;
+    const discountRate = booking.originalAmount > 0 ? booking.discountAmount / booking.originalAmount : 0;
     const discountAmount = Math.round(originalAmount * discountRate * 100) / 100;
 
     const updates: Partial<Booking> = {
@@ -168,7 +199,7 @@ const BookingDetailPage: React.FC = () => {
           updateBooking(booking.id, { status: 'confirmed' });
           setBooking(prev => prev ? { ...prev, status: 'confirmed' } : null);
 
-          const discounts: DiscountDetail[] = [];
+          const discounts: any[] = [];
           if (booking.couponIds && booking.couponIds.length > 0) {
             booking.couponIds.forEach(cid => {
               const coupon = mockCoupons.find(c => c.id === cid);
@@ -185,7 +216,7 @@ const BookingDetailPage: React.FC = () => {
 
           const machine = getMachineById(booking.machineId);
 
-          const newBill: Bill = {
+          const newBill = {
             id: `bill_${Date.now()}`,
             billNo: `BD${Date.now()}`,
             bookingId: booking.id,
@@ -245,6 +276,22 @@ const BookingDetailPage: React.FC = () => {
         setEditForm(prev => ({ ...prev, status: statusList[res.tapIndex] }));
       }
     });
+  }, []);
+
+  const handleSlotSelect = useCallback((start: string, end: string) => {
+    setEditForm(prev => ({ ...prev, startTime: start, endTime: end }));
+  }, []);
+
+  const handleStartTimeChange = useCallback((e: any) => {
+    const [hourIdx, minIdx] = e.detail.value;
+    const time = `${TIME_OPTIONS_HOUR[hourIdx]}:${TIME_OPTIONS_MINUTE[minIdx]}`;
+    setEditForm(prev => ({ ...prev, startTime: time }));
+  }, []);
+
+  const handleEndTimeChange = useCallback((e: any) => {
+    const [hourIdx, minIdx] = e.detail.value;
+    const time = `${TIME_OPTIONS_HOUR[hourIdx]}:${TIME_OPTIONS_MINUTE[minIdx]}`;
+    setEditForm(prev => ({ ...prev, endTime: time }));
   }, []);
 
   if (!booking) {
@@ -317,7 +364,7 @@ const BookingDetailPage: React.FC = () => {
             </View>
           </View>
         ) : (
-          <View className={styles.infoList}>
+          <View className={styles.editForm}>
             <View className={styles.adjustItem}>
               <Text className={styles.adjustLabel}>预订日期</Text>
               <Input
@@ -327,26 +374,66 @@ const BookingDetailPage: React.FC = () => {
                 placeholder="YYYY-MM-DD"
               />
             </View>
-            <View className={styles.adjustItem}>
-              <Text className={styles.adjustLabel}>开始时间</Text>
-              <Input
-                className={styles.adjustInput}
-                type="digit"
-                value={editForm.startTime}
-                onInput={e => setEditForm(prev => ({ ...prev, startTime: e.detail.value }))}
-                placeholder="如 19:00"
-              />
+
+            <View className={styles.timeSlotSection}>
+              <Text className={styles.sectionSubTitle}>常用时段</Text>
+              <View className={styles.slotGrid}>
+                {COMMON_TIME_SLOTS.map((slot, idx) => {
+                  const isActive = editForm.startTime === slot.start && editForm.endTime === slot.end;
+                  return (
+                    <View
+                      key={idx}
+                      className={`${styles.slotChip} ${isActive ? styles.active : ''}`}
+                      onClick={() => handleSlotSelect(slot.start, slot.end)}
+                    >
+                      <Text className={styles.slotChipText}>{slot.label}</Text>
+                    </View>
+                  );
+                })}
+              </View>
             </View>
-            <View className={styles.adjustItem}>
-              <Text className={styles.adjustLabel}>结束时间</Text>
-              <Input
-                className={styles.adjustInput}
-                type="digit"
-                value={editForm.endTime}
-                onInput={e => setEditForm(prev => ({ ...prev, endTime: e.detail.value }))}
-                placeholder="如 21:00"
-              />
+
+            <View className={styles.timePickerRow}>
+              <View className={styles.timePickerItem}>
+                <Text className={styles.timePickerLabel}>开始时间</Text>
+                <Picker
+                  mode="multiSelector"
+                  range={[TIME_OPTIONS_HOUR, TIME_OPTIONS_MINUTE]}
+                  value={[startHourIndex >= 0 ? startHourIndex : 0, startMinIndex >= 0 ? startMinIndex : 0]}
+                  onChange={handleStartTimeChange}
+                >
+                  <View className={styles.timePickerDisplay}>
+                    <Text className={styles.timePickerValue}>{editForm.startTime}</Text>
+                    <Text className={styles.timePickerArrow}>›</Text>
+                  </View>
+                </Picker>
+              </View>
+              <View className={styles.timePickerDivider}>
+                <Text className={styles.timePickerDividerText}>至</Text>
+              </View>
+              <View className={styles.timePickerItem}>
+                <Text className={styles.timePickerLabel}>结束时间</Text>
+                <Picker
+                  mode="multiSelector"
+                  range={[TIME_OPTIONS_HOUR, TIME_OPTIONS_MINUTE]}
+                  value={[endHourIndex >= 0 ? endHourIndex : 0, endMinIndex >= 0 ? endMinIndex : 0]}
+                  onChange={handleEndTimeChange}
+                >
+                  <View className={styles.timePickerDisplay}>
+                    <Text className={styles.timePickerValue}>{editForm.endTime}</Text>
+                    <Text className={styles.timePickerArrow}>›</Text>
+                  </View>
+                </Picker>
+              </View>
             </View>
+
+            <View className={styles.previewRow}>
+              <Text className={styles.previewLabel}>预计时长</Text>
+              <Text className={styles.previewValue}>
+                {previewHours} 小时 · ¥{previewPrice}
+              </Text>
+            </View>
+
             <View className={styles.adjustItem} onClick={handleSelectMachine}>
               <Text className={styles.adjustLabel}>镖机</Text>
               <Text

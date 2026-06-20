@@ -30,46 +30,40 @@ const MachinesPage: React.FC = () => {
     { key: 'maintenance', label: '维护' }
   ];
 
-  const machinesWithRealtimeStatus: Machine[] = useMemo(() => {
-    const now = new Date();
-    const currentHour = now.getHours();
-    const today = formatDate(now);
-
+  const machinesWithDateStatus: Machine[] = useMemo(() => {
     return machines.map(m => {
       if (m.status === 'maintenance') {
         return { ...m, status: 'maintenance' as MachineStatus };
       }
 
-      const hasActiveBooking = bookings.some(
+      const hasBooking = bookings.some(
         b =>
           b.machineId === m.id &&
-          b.date === today &&
-          (b.status === 'confirmed' || b.status === 'pending' || b.status === 'completed') &&
-          parseInt(b.startTime) <= currentHour &&
-          parseInt(b.endTime) > currentHour
+          b.date === currentDate &&
+          b.status !== 'cancelled'
       );
 
       return {
         ...m,
-        status: hasActiveBooking ? 'occupied' as MachineStatus : 'idle' as MachineStatus
+        status: hasBooking ? 'occupied' as MachineStatus : 'idle' as MachineStatus
       };
     });
   }, [machines, bookings, currentDate]);
 
   const filteredMachines = useMemo(() => {
     if (activeFilter === 'all') {
-      return machinesWithRealtimeStatus;
+      return machinesWithDateStatus;
     }
-    return machinesWithRealtimeStatus.filter(m => m.status === activeFilter);
-  }, [machinesWithRealtimeStatus, activeFilter]);
+    return machinesWithDateStatus.filter(m => m.status === activeFilter);
+  }, [machinesWithDateStatus, activeFilter]);
 
   const stats = useMemo(() => {
-    const total = machinesWithRealtimeStatus.length;
-    const idle = machinesWithRealtimeStatus.filter(m => m.status === 'idle').length;
-    const occupied = machinesWithRealtimeStatus.filter(m => m.status === 'occupied').length;
-    const maintenance = machinesWithRealtimeStatus.filter(m => m.status === 'maintenance').length;
+    const total = machinesWithDateStatus.length;
+    const idle = machinesWithDateStatus.filter(m => m.status === 'idle').length;
+    const occupied = machinesWithDateStatus.filter(m => m.status === 'occupied').length;
+    const maintenance = machinesWithDateStatus.filter(m => m.status === 'maintenance').length;
     return { total, idle, occupied, maintenance };
-  }, [machinesWithRealtimeStatus]);
+  }, [machinesWithDateStatus]);
 
   const handlePrevDay = useCallback(() => {
     const date = new Date(currentDate.replace(/-/g, '/'));
@@ -99,6 +93,10 @@ const MachinesPage: React.FC = () => {
 
   const weekdayLabel = getWeekdayLabel(currentDate);
   const isToday = currentDate === formatDate(new Date());
+
+  const getBookingsForMachine = (machineId: string) => {
+    return bookings.filter(b => b.machineId === machineId);
+  };
 
   return (
     <ScrollView scrollY className={styles.page}>
@@ -171,6 +169,8 @@ const MachinesPage: React.FC = () => {
             <MachineCard
               key={machine.id}
               machine={machine}
+              date={currentDate}
+              bookings={getBookingsForMachine(machine.id)}
               onClick={handleMachineClick}
             />
           ))
