@@ -3,23 +3,23 @@ import { View, Text, ScrollView } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { Bill, BillStatus, BILL_STATUS_LABEL } from '@/types/bill';
 import { RankingPlayer, LeagueSeason } from '@/types/ranking';
-import { mockBills } from '@/data/bills';
 import { mockRankings, mockSeasons } from '@/data/rankings';
 import BillItemComponent from '@/components/BillItem';
 import RankingItem from '@/components/RankingItem';
+import { useAppStore } from '@/hooks/useAppStore';
 import styles from './index.module.scss';
 
 type TabType = 'bills' | 'ranking';
 
 const BillPage: React.FC = () => {
+  const { bills } = useAppStore();
   const [activeTab, setActiveTab] = useState<TabType>('bills');
-  const [bills] = useState<Bill[]>(mockBills);
   const [rankings] = useState<RankingPlayer[]>(mockRankings);
   const [seasons] = useState<LeagueSeason[]>(mockSeasons);
   const [activeFilter, setActiveFilter] = useState<string>('all');
 
   useDidShow(() => {
-    console.log('[BillPage] 页面显示');
+    console.log('[BillPage] 页面显示,账单数量:', bills.length);
   });
 
   usePullDownRefresh(() => {
@@ -30,10 +30,13 @@ const BillPage: React.FC = () => {
   });
 
   const filteredBills = useMemo(() => {
+    const sorted = [...bills].sort(
+      (a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime()
+    );
     if (activeFilter === 'all') {
-      return bills;
+      return sorted;
     }
-    return bills.filter(b => b.status === activeFilter);
+    return sorted.filter(b => b.status === activeFilter);
   }, [bills, activeFilter]);
 
   const summary = useMemo(() => {
@@ -168,6 +171,9 @@ const BillPage: React.FC = () => {
               <View className={styles.emptyState}>
                 <Text className={styles.emptyIcon}>📋</Text>
                 <Text className={styles.emptyText}>暂无账单记录</Text>
+                <Text style={{ fontSize: '24rpx', color: '#C9CDD4', marginTop: '12rpx', display: 'block' }}>
+                  完成预订支付后会自动生成账单
+                </Text>
               </View>
             )}
           </View>

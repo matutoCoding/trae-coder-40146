@@ -2,18 +2,17 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, Input } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { PeriodRule, Booking, WEEKDAY_LABEL, Weekday } from '@/types/booking';
-import { mockPeriodRules, mockBookings } from '@/data/bookings';
 import { mockMachines } from '@/data/machines';
 import BookingCard from '@/components/BookingCard';
 import { getWeekdayLabel, formatDate, generatePeriodDates, calculateHours } from '@/utils/date';
+import { useAppStore } from '@/hooks/useAppStore';
 import styles from './index.module.scss';
 
 type TabType = 'rules' | 'bookings';
 
 const BookingPage: React.FC = () => {
+  const { bookings, rules, addBookings, addRule, updateRule } = useAppStore();
   const [activeTab, setActiveTab] = useState<TabType>('rules');
-  const [rules, setRules] = useState<PeriodRule[]>(mockPeriodRules);
-  const [bookings, setBookings] = useState<Booking[]>(mockBookings);
   const [showModal, setShowModal] = useState<boolean>(false);
   const [editingRule, setEditingRule] = useState<PeriodRule | null>(null);
 
@@ -95,40 +94,54 @@ const BookingPage: React.FC = () => {
     console.log('[BookingPage] 编辑周期规则:', rule.id);
   }, []);
 
-  const handleGenerateBookings = useCallback((rule: PeriodRule) => {
-    const dates = generatePeriodDates(rule.startDate, rule.weekday, rule.weeks);
-    const hours = calculateHours(rule.startTime, rule.endTime);
-    const machine = mockMachines.find(m => m.id === rule.machineId);
-    const pricePerHour = machine?.pricePerHour || 50;
+  const handleGenerateBookings = useCallback(
+    (rule: PeriodRule) => {
+      const dates = generatePeriodDates(rule.startDate, rule.weekday, rule.weeks);
+      const hours = calculateHours(rule.startTime, rule.endTime);
+      const machine = mockMachines.find(m => m.id === rule.machineId);
+      const pricePerHour = machine?.pricePerHour || 50;
 
-    const newBookings: Booking[] = dates.map((date, index) => {
-      const originalAmount = hours * pricePerHour;
-      return {
-        id: `b_new_${Date.now()}_${index}`,
-        ruleId: rule.id,
-        machineId: rule.machineId,
-        machineName: rule.machineName,
-        date,
-        startTime: rule.startTime,
-        endTime: rule.endTime,
-        playerName: rule.playerName,
-        playerPhone: rule.playerPhone,
-        status: 'pending',
-        totalHours: hours,
-        originalAmount,
-        discountAmount: 0,
-        finalAmount: originalAmount,
-        createTime: formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss')
-      };
-    });
+      const newBookings: Booking[] = dates.map((date, index) => {
+        const originalAmount = hours * pricePerHour;
+        return {
+          id: `b_new_${Date.now()}_${index}`,
+          ruleId: rule.id,
+          machineId: rule.machineId,
+          machineName: rule.machineName,
+          date,
+          startTime: rule.startTime,
+          endTime: rule.endTime,
+          playerName: rule.playerName,
+          playerPhone: rule.playerPhone,
+          status: 'pending',
+          totalHours: hours,
+          originalAmount,
+          discountAmount: 0,
+          finalAmount: originalAmount,
+          couponIds: [],
+          createTime: formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss')
+        };
+      });
 
-    setBookings(prev => [...prev, ...newBookings]);
-    console.log('[BookingPage] 批量生成预订:', newBookings.length, '条');
-    Taro.showToast({
-      title: `已生成${newBookings.length}条预订`,
-      icon: 'success'
-    });
-  }, []);
+      console.log('[BookingPage] 尝试生成预订:', newBookings.length, '条');
+      const added = addBookings(newBookings);
+      const skipped = newBookings.length - added.length;
+
+      if (skipped > 0) {
+        Taro.showModal({
+          title: '预订生成完成',
+          content: `成功生成${added.length}条预订\n跳过${skipped}条（重复或时段冲突）`,
+          showCancel: false
+        });
+      } else {
+        Taro.showToast({
+          title: `已生成${added.length}条预订`,
+          icon: 'success'
+        });
+      }
+    },
+    [addBookings]
+  );
 
   const handleSubmitRule = useCallback(() => {
     if (!formData.name.trim()) {
@@ -157,10 +170,10 @@ const BookingPage: React.FC = () => {
     };
 
     if (editingRule) {
-      setRules(prev => prev.map(r => (r.id === editingRule.id ? newRule : r)));
+      updateRule(editingRule.id, newRule);
       console.log('[BookingPage] 更新规则:', newRule.id);
     } else {
-      setRules(prev => [...prev, newRule]);
+      addRule(newRule);
       console.log('[BookingPage] 新增规则:', newRule.id);
     }
 
@@ -169,7 +182,7 @@ const BookingPage: React.FC = () => {
       title: editingRule ? '修改成功' : '创建成功',
       icon: 'success'
     });
-  }, [formData, editingRule]);
+  }, [formData, editingRule, addRule, updateRule]);
 
   const handleWeekdayChange = useCallback((weekday: Weekday) => {
     setFormData(prev => ({ ...prev, weekday }));

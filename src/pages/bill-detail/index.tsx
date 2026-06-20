@@ -1,26 +1,28 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import Taro, { useRouter, useDidShow } from '@tarojs/taro';
 import { Bill, BILL_STATUS_LABEL, BillItem } from '@/types/bill';
-import { getBillById } from '@/data/bills';
 import { COUPON_TYPE_LABEL } from '@/types/coupon';
+import { useAppStore } from '@/hooks/useAppStore';
 import styles from './index.module.scss';
 
 const BillDetailPage: React.FC = () => {
   const router = useRouter();
   const billId = router.params.id || 'bill001';
+  const { getBillById } = useAppStore();
 
-  const [bill, setBill] = useState<Bill | null>(null);
+  const [bill, setBill] = useState<Bill | null>(() => getBillById(billId));
 
-  useEffect(() => {
+  const loadBill = useCallback(() => {
     const b = getBillById(billId);
     if (b) {
       setBill(b);
       console.log('[BillDetail] 加载账单信息:', b.billNo);
     }
-  }, [billId]);
+  }, [billId, getBillById]);
 
   useDidShow(() => {
+    loadBill();
     console.log('[BillDetail] 页面显示');
   });
 
@@ -59,7 +61,15 @@ const BillDetailPage: React.FC = () => {
   if (!bill) {
     return (
       <View className={styles.page}>
-        <Text>加载中...</Text>
+        <View style={{ padding: '100rpx', textAlign: 'center' }}>
+          <Text style={{ fontSize: '48rpx' }}>📋</Text>
+          <Text style={{ fontSize: '28rpx', color: '#86909C', marginTop: '24rpx', display: 'block' }}>
+            加载中...
+          </Text>
+          <Text style={{ fontSize: '24rpx', color: '#C9CDD4', marginTop: '12rpx', display: 'block' }}>
+            账单ID: {billId}
+          </Text>
+        </View>
       </View>
     );
   }

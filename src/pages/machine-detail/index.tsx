@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import Taro, { useRouter, useDidShow } from '@tarojs/taro';
 import { Machine, MACHINE_STATUS_LABEL } from '@/types/machine';
 import { Booking } from '@/types/booking';
-import { getMachineById } from '@/data/machines';
-import { getBookingsByMachine } from '@/data/bookings';
 import StatusTag from '@/components/StatusTag';
-import { formatDate, addDays, getWeekdayLabel } from '@/utils/date';
+import { formatDate, addDays, getWeekdayLabel, calculateHours } from '@/utils/date';
+import { useAppStore } from '@/hooks/useAppStore';
 import styles from './index.module.scss';
 
 type SlotStatus = 'available' | 'occupied' | 'selected';
@@ -20,25 +19,22 @@ interface TimeSlot {
 const MachineDetailPage: React.FC = () => {
   const router = useRouter();
   const machineId = router.params.id || 'm001';
+  const initialDate = router.params.date || formatDate(new Date());
+  const { getMachineById, getBookingsByMachine, addBookings, bookings } = useAppStore();
 
-  const [machine, setMachine] = useState<Machine | null>(null);
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()));
+  const [machine, setMachine] = useState<Machine | null>(() => getMachineById(machineId));
+  const [selectedDate, setSelectedDate] = useState<string>(initialDate);
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
 
-  useEffect(() => {
-    const m = getMachineById(machineId);
-    if (m) {
-      setMachine(m);
-      const b = getBookingsByMachine(machineId);
-      setBookings(b);
-      console.log('[MachineDetail] 加载镖机信息:', m.name);
-    }
-  }, [machineId]);
-
   useDidShow(() => {
-    console.log('[MachineDetail] 页面显示');
+    const m = getMachineById(machineId);
+    setMachine(m);
+    console.log('[MachineDetail] 页面显示,镖机:', m?.name);
   });
+
+  const machineBookings: Booking[] = useMemo(() => {
+    return bookings.filter(b => b.machineId === machineId);
+  }, [bookings, machineId]);
 
   const timeSlots = useMemo((): TimeSlot[] => {
     const slots: TimeSlot[] = [];
@@ -47,7 +43,7 @@ const MachineDetailPage: React.FC = () => {
 
     for (let hour = startHour; hour < endHour; hour++) {
       const time = `${String(hour).padStart(2, '0')}:00`;
-      const booking = bookings.find(
+      const booking = machineBookings.find(
         b =>
           b.date === selectedDate &&
           b.status !== 'cancelled' &&
@@ -71,10 +67,10 @@ const MachineDetailPage: React.FC = () => {
     }
 
     return slots;
-  }, [bookings, selectedDate, selectedSlots]);
+  }, [machineBookings, selectedDate, selectedSlots]);
 
   const totalPrice = useMemo(() => {
-    if (!machine) return 0;
+    if (!machine) return '0.00';
     return (selectedSlots.length * machine.pricePerHour).toFixed(2);
   }, [machine, selectedSlots]);
 
@@ -120,27 +116,50 @@ const MachineDetailPage: React.FC = () => {
       return;
     }
 
-    console.log('[MachineDetail] 确认预订', {
-      machineId,
-      date: selectedDate,
-      slots: selectedSlots,
-      totalPrice
-    });
+    if (!machine) return;
 
-    Taro.showModal({
-      title: '确认预订',
-      content: `预订 ${machine?.name} ${selectedDate} ${selectedSlots.length}个时段，共计¥${totalPrice}`,
-      success: res => {
-        if (res.confirm) {
-          Taro.showToast({
-            title: '预订成功',
-            icon: 'success'
-          });
-          setSelectedSlots([]);
-        }
-      }
-    });
-  }, [selectedSlots, machine, selectedDate, totalPrice, machineId]);
+    const sortedSlots = [...selectedSlots].sort();
+    const startTime = sortedSlots[0];
+    const lastHour = parseInt(sortedSlots[sortedSlots.length - 1]) + 1;
+    const endTime = `${String(lastHour).padStart(2, '0')}:00`;
+    const hours = calculateHours(startTime, endTime);
+    const originalAmount = hours * machine.pricePerHour;
+
+    const newBooking: Booking = {
+      id: `b_${Date.now()}`,
+      ruleId: '',
+      machineId: machine.id,
+      machineName: machine.name,
+      date: selectedDate,
+      startTime,
+      endTime,
+      playerName: '散客预订',
+      playerPhone: '',
+      status: 'pending',
+      totalHours: hours,
+      originalAmount,
+      discountAmount: 0,
+      finalAmount: originalAmount,
+      couponIds: [],
+      createTime: formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss')
+    };
+
+    const added = addBookings([newBooking]);
+
+    if (added.length > 0) {
+      Taro.showToast({
+        title: '预订成功',
+        icon: 'success'
+      });
+      setSelectedSlots([]);
+      console.log('[MachineDetail] 预订成功:', added[0].id);
+    } else {
+      Taro.showToast({
+        title: '时段冲突，预订失败',
+        icon: 'none'
+      });
+    }
+  }, [selectedSlots, machine, selectedDate, addBookings]);
 
   const getStatusType = (status: string) => {
     switch (status) {
@@ -163,6 +182,16 @@ const MachineDetailPage: React.FC = () => {
     );
   }
 
+  const now = new Date();
+  const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const today = formatDate(now);
+  const activeBooking = machineBookings.find(
+    b => b.date === today && b.status !== 'cancelled' && b.startTime <= nowTime && b.endTime > nowTime
+  );
+  const displayStatus = machine.status === 'active'
+    ? (activeBooking ? 'occupied' : 'idle')
+    : machine.status;
+
   return (
     <ScrollView scrollY className={styles.page}>
       <View className={styles.header}>
@@ -171,8 +200,8 @@ const MachineDetailPage: React.FC = () => {
           {machine.code} · {machine.model}
         </Text>
         <StatusTag
-          status={MACHINE_STATUS_LABEL[machine.status]}
-          type={getStatusType(machine.status)}
+          status={MACHINE_STATUS_LABEL[displayStatus]}
+          type={getStatusType(displayStatus)}
         />
         <View className={styles.machineInfoRow}>
           <View className={styles.machineInfoItem}>

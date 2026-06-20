@@ -65,11 +65,17 @@ export const calculateWithCoupons = (
   coupons: Coupon[],
   steps: DiscountStep[]
 ): CalculationResult => {
-  console.log('[CouponCalc] 开始优惠计算', { originalAmount, couponCount: coupons.length });
+  console.log('[CouponCalc] 开始优惠计算', {
+    originalAmount,
+    couponCount: coupons.length,
+    couponTypes: coupons.map(c => ({ id: c.id, type: c.type, name: c.name }))
+  });
 
   const enabledSteps = steps
     .filter(s => s.enabled)
     .sort((a, b) => a.order - b.order);
+
+  console.log('[CouponCalc] 启用的计算步骤:', enabledSteps.map(s => ({ type: s.type, order: s.order, name: s.name })));
 
   const result: CalculationResult = {
     originalAmount,
@@ -80,10 +86,20 @@ export const calculateWithCoupons = (
   };
 
   let currentAmount = originalAmount;
+  const usedCouponIds = new Set<string>();
 
   for (const step of enabledSteps) {
-    const coupon = coupons.find(c => c.id === step.id && c.status === 'available');
-    if (!coupon) continue;
+    const coupon = coupons.find(
+      c => c.type === step.type && c.status === 'available' && !usedCouponIds.has(c.id)
+    );
+
+    if (!coupon) {
+      console.log('[CouponCalc] 跳过步骤:', step.name, '未找到可用优惠券');
+      continue;
+    }
+
+    console.log('[CouponCalc] 应用优惠券:', coupon.name, '类型:', coupon.type, '当前金额:', currentAmount);
+    usedCouponIds.add(coupon.id);
 
     const { discountAmount, afterAmount } = calculateDiscount(coupon, currentAmount);
 
@@ -117,7 +133,8 @@ export const calculateWithCoupons = (
     originalAmount,
     totalDiscount: result.totalDiscount,
     finalAmount: result.finalAmount,
-    hasNegativeFloor: result.hasNegativeFloor
+    hasNegativeFloor: result.hasNegativeFloor,
+    steps: result.steps.map(s => ({ name: s.couponName, discount: s.discountAmount }))
   });
 
   return result;

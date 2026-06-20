@@ -2,15 +2,15 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { Machine, MachineStatus, MACHINE_STATUS_LABEL } from '@/types/machine';
-import { mockMachines } from '@/data/machines';
 import MachineCard from '@/components/MachineCard';
 import { formatDate, addDays, getWeekdayLabel } from '@/utils/date';
+import { useAppStore } from '@/hooks/useAppStore';
 import styles from './index.module.scss';
 
 const MachinesPage: React.FC = () => {
+  const { machines, bookings } = useAppStore();
   const [currentDate, setCurrentDate] = useState<string>(formatDate(new Date()));
   const [activeFilter, setActiveFilter] = useState<string>('all');
-  const [machines, setMachines] = useState<Machine[]>(mockMachines);
 
   useDidShow(() => {
     console.log('[MachinesPage] 页面显示');
@@ -30,20 +30,43 @@ const MachinesPage: React.FC = () => {
     { key: 'maintenance', label: '维护' }
   ];
 
+  const machinesWithRealtimeStatus: Machine[] = useMemo(() => {
+    const now = new Date();
+    const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const today = formatDate(now);
+
+    return machines.map(m => {
+      if (m.status !== 'active') return m;
+
+      const activeBooking = bookings.find(b =>
+        b.machineId === m.id &&
+        b.date === currentDate &&
+        (b.status === 'confirmed' || b.status === 'pending' || b.status === 'completed') &&
+        b.startTime <= nowTime &&
+        b.endTime > nowTime
+      );
+
+      return {
+        ...m,
+        status: activeBooking ? 'occupied' : 'idle'
+      };
+    });
+  }, [machines, bookings, currentDate]);
+
   const filteredMachines = useMemo(() => {
     if (activeFilter === 'all') {
-      return machines;
+      return machinesWithRealtimeStatus;
     }
-    return machines.filter(m => m.status === activeFilter);
-  }, [machines, activeFilter]);
+    return machinesWithRealtimeStatus.filter(m => m.status === activeFilter);
+  }, [machinesWithRealtimeStatus, activeFilter]);
 
   const stats = useMemo(() => {
-    const total = machines.length;
-    const idle = machines.filter(m => m.status === 'idle').length;
-    const occupied = machines.filter(m => m.status === 'occupied').length;
-    const maintenance = machines.filter(m => m.status === 'maintenance').length;
+    const total = machinesWithRealtimeStatus.length;
+    const idle = machinesWithRealtimeStatus.filter(m => m.status === 'idle').length;
+    const occupied = machinesWithRealtimeStatus.filter(m => m.status === 'occupied').length;
+    const maintenance = machinesWithRealtimeStatus.filter(m => m.status === 'maintenance').length;
     return { total, idle, occupied, maintenance };
-  }, [machines]);
+  }, [machinesWithRealtimeStatus]);
 
   const handlePrevDay = useCallback(() => {
     const date = new Date(currentDate.replace(/-/g, '/'));
@@ -62,9 +85,9 @@ const MachinesPage: React.FC = () => {
   const handleMachineClick = useCallback((machine: Machine) => {
     console.log('[MachinesPage] 点击镖机:', machine.id, machine.name);
     Taro.navigateTo({
-      url: `/pages/machine-detail/index?id=${machine.id}`
+      url: `/pages/machine-detail/index?id=${machine.id}&date=${currentDate}`
     });
-  }, []);
+  }, [currentDate]);
 
   const handleFilterClick = useCallback((key: string) => {
     setActiveFilter(key);
