@@ -182,6 +182,21 @@
     transform: scale(0.98);
     opacity: 0.9;
   }
+
+  &.disabled {
+    background: $color-bg-disabled !important;
+    box-shadow: none !important;
+    cursor: not-allowed;
+
+    .btnText {
+      color: $color-text-disabled !important;
+    }
+
+    &:active {
+      transform: none;
+      opacity: 1;
+    }
+  }
 }
 
 .btnText {
@@ -356,4 +371,37 @@
   font-size: $font-size-md;
   font-weight: $font-weight-semibold;
   color: $color-primary;
+}
+
+.conflictWarning {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  background: #FFF0F0;
+  border-radius: $radius-md;
+  margin-bottom: $spacing-md;
+}
+
+.conflictWarningIcon {
+  font-size: 36rpx;
+  line-height: 1;
+}
+
+.conflictWarningContent {
+  flex: 1;
+}
+
+.conflictWarningTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: #F53F3F;
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.conflictWarningDesc {
+  font-size: $font-size-xs;
+  color: #F53F3F;
+  line-height: 1.4;
 }

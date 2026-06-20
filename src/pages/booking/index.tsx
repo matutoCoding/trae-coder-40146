@@ -6,6 +6,7 @@ import { mockMachines } from '@/data/machines';
 import BookingCard from '@/components/BookingCard';
 import { getWeekdayLabel, formatDate, generatePeriodDates, calculateHours } from '@/utils/date';
 import { useAppStore } from '@/hooks/useAppStore';
+import { ConflictInfo } from '@/store/appStore';
 import styles from './index.module.scss';
 
 type TabType = 'rules' | 'bookings';
@@ -14,7 +15,7 @@ const TIME_HOURS = ['10', '11', '12', '13', '14', '15', '16', '17', '18', '19', 
 const TIME_MINS = ['00', '30'];
 
 const BookingPage: React.FC = () => {
-  const { bookings, rules, addBookings, addRule, updateRule, updateBookingsByRule, machines } = useAppStore();
+  const { bookings, rules, addBookings, addRule, updateRule, updateBookingsByRule, machines, previewConflictsForRule } = useAppStore();
   const [activeTab, setActiveTab] = useState<TabType>('rules');
   const [showModal, setShowModal] = useState<boolean>(false);
   const [editingRule, setEditingRule] = useState<PeriodRule | null>(null);
@@ -25,8 +26,15 @@ const BookingPage: React.FC = () => {
     startTime: '19:00',
     endTime: '21:00',
     machineId: '',
-    onlyFuture: true
   });
+  const [previewConflicts, setPreviewConflicts] = useState<ConflictInfo[]>([]);
+  const [showResult, setShowResult] = useState<boolean>(false);
+  const [batchResult, setBatchResult] = useState<{
+    updated: number;
+    skippedStatus: number;
+    skippedPast: number;
+    conflicts: ConflictInfo[];
+  } | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -112,11 +120,25 @@ const BookingPage: React.FC = () => {
       startTime: rule.startTime,
       endTime: rule.endTime,
       machineId: rule.machineId,
-      onlyFuture: true
     });
+    setPreviewConflicts([]);
+    setShowResult(false);
+    setBatchResult(null);
     setShowBatchModal(true);
     console.log('[BookingPage] 批量调整:', rule.id);
   }, []);
+
+  const handlePreviewConflicts = useCallback(() => {
+    if (!batchRule) return;
+    const updates: Partial<Booking> = {
+      startTime: batchForm.startTime,
+      endTime: batchForm.endTime,
+      machineId: batchForm.machineId,
+    };
+    const conflicts = previewConflictsForRule(batchRule.id, updates);
+    setPreviewConflicts(conflicts);
+    console.log('[BookingPage] 预览冲突:', conflicts.length, '条');
+  }, [batchRule, batchForm, previewConflictsForRule]);
 
   const handleBatchSave = useCallback(() => {
     if (!batchRule) return;
@@ -138,24 +160,25 @@ const BookingPage: React.FC = () => {
     const result = updateBookingsByRule(
       batchRule.id,
       updates,
-      { onlyFuture: batchForm.onlyFuture, skipConflict: true }
+      { onlyFuture: true }
     );
 
-    setShowBatchModal(false);
-
-    if (result.conflicts > 0 || result.skipped > 0) {
-      Taro.showModal({
-        title: '批量调整完成',
-        content: `成功更新${result.updated}条\n跳过${result.skipped + result.conflicts}条（已过期/已完成/冲突）`,
-        showCancel: false
-      });
-    } else {
-      Taro.showToast({
-        title: `已更新${result.updated}条`,
-        icon: 'success'
-      });
-    }
+    setBatchResult({
+      updated: result.updated,
+      skippedStatus: result.skippedDetails.status,
+      skippedPast: result.skippedDetails.past,
+      conflicts: result.conflicts
+    });
+    setShowResult(true);
+    console.log('[BookingPage] 批量调整结果:', result);
   }, [batchRule, batchForm, machines, updateBookingsByRule]);
+
+  const handleCloseBatch = useCallback(() => {
+    setShowBatchModal(false);
+    setShowResult(false);
+    setBatchResult(null);
+    setPreviewConflicts([]);
+  }, []);
 
   const handleGenerateBookings = useCallback(
     (rule: PeriodRule) => {
@@ -293,6 +316,9 @@ const BookingPage: React.FC = () => {
   const batchEndH = TIME_HOURS.indexOf(batchForm.endTime.split(':')[0]);
   const batchEndM = TIME_MINS.indexOf(batchForm.endTime.split(':')[1]);
   const batchMachineName = machines.find(m => m.id === batchForm.machineId)?.name || '选择镖机';
+
+  const ruleBookings = batchRule ? bookings.filter(b => b.ruleId === batchRule.id) : [];
+  const futureBookingsCount = ruleBookings.filter(b => b.status !== 'completed' && b.status !== 'cancelled').length;
 
   const tabs = [
     { key: 'rules' as TabType, label: '周期规则' },
@@ -558,72 +584,177 @@ const BookingPage: React.FC = () => {
       )}
 
       {showBatchModal && batchRule && (
-        <View className={styles.formModal} onClick={() => setShowBatchModal(false)}>
+        <View className={styles.formModal} onClick={handleCloseBatch}>
           <View className={styles.modalContent} onClick={e => e.stopPropagation()}>
             <View className={styles.modalHeader}>
               <Text className={styles.modalTitle}>批量调整预订</Text>
-              <View className={styles.modalClose} onClick={() => setShowBatchModal(false)}>
+              <View className={styles.modalClose} onClick={handleCloseBatch}>
                 <Text className={styles.modalCloseText}>✕</Text>
               </View>
             </View>
 
-            <Text style={{ fontSize: '24rpx', color: '#86909C', marginBottom: '24rpx', display: 'block' }}>
-              规则：{batchRule.name}
-            </Text>
+            {!showResult ? (
+              <View>
+                <Text style={{ fontSize: '24rpx', color: '#86909C', marginBottom: '24rpx', display: 'block' }}>
+                  规则：{batchRule.name}
+                </Text>
 
-            <View className={styles.formItem}>
-              <Text className={styles.formLabel}>开始时间</Text>
-              <Picker
-                mode="multiSelector"
-                range={[TIME_HOURS, TIME_MINS]}
-                value={[batchStartH >= 0 ? batchStartH : 0, batchStartM >= 0 ? batchStartM : 0]}
-                onChange={handleBatchStartTimeChange}
-              >
-                <View className={styles.pickerDisplay}>
-                  <Text className={styles.pickerText}>{batchForm.startTime}</Text>
-                  <Text className={styles.pickerArrow}>›</Text>
+                <View className={styles.formItem}>
+                  <Text className={styles.formLabel}>开始时间</Text>
+                  <Picker
+                    mode="multiSelector"
+                    range={[TIME_HOURS, TIME_MINS]}
+                    value={[batchStartH >= 0 ? batchStartH : 0, batchStartM >= 0 ? batchStartM : 0]}
+                    onChange={handleBatchStartTimeChange}
+                  >
+                    <View className={styles.pickerDisplay}>
+                      <Text className={styles.pickerText}>{batchForm.startTime}</Text>
+                      <Text className={styles.pickerArrow}>›</Text>
+                    </View>
+                  </Picker>
                 </View>
-              </Picker>
-            </View>
 
-            <View className={styles.formItem}>
-              <Text className={styles.formLabel}>结束时间</Text>
-              <Picker
-                mode="multiSelector"
-                range={[TIME_HOURS, TIME_MINS]}
-                value={[batchEndH >= 0 ? batchEndH : 0, batchEndM >= 0 ? batchEndM : 0]}
-                onChange={handleBatchEndTimeChange}
-              >
-                <View className={styles.pickerDisplay}>
-                  <Text className={styles.pickerText}>{batchForm.endTime}</Text>
-                  <Text className={styles.pickerArrow}>›</Text>
+                <View className={styles.formItem}>
+                  <Text className={styles.formLabel}>结束时间</Text>
+                  <Picker
+                    mode="multiSelector"
+                    range={[TIME_HOURS, TIME_MINS]}
+                    value={[batchEndH >= 0 ? batchEndH : 0, batchEndM >= 0 ? batchEndM : 0]}
+                    onChange={handleBatchEndTimeChange}
+                  >
+                    <View className={styles.pickerDisplay}>
+                      <Text className={styles.pickerText}>{batchForm.endTime}</Text>
+                      <Text className={styles.pickerArrow}>›</Text>
+                    </View>
+                  </Picker>
                 </View>
-              </Picker>
-            </View>
 
-            <View className={styles.formItem} onClick={handleBatchMachineSelect}>
-              <Text className={styles.formLabel}>镖机</Text>
-              <View className={styles.pickerDisplay}>
-                <Text className={styles.pickerText}>{batchMachineName}</Text>
-                <Text className={styles.pickerArrow}>›</Text>
+                <View className={styles.formItem} onClick={handleBatchMachineSelect}>
+                  <Text className={styles.formLabel}>镖机</Text>
+                  <View className={styles.pickerDisplay}>
+                    <Text className={styles.pickerText}>{batchMachineName}</Text>
+                    <Text className={styles.pickerArrow}>›</Text>
+                  </View>
+                </View>
+
+                <View className={styles.previewBtn} onClick={handlePreviewConflicts}>
+                  <Text className={styles.previewBtnText}>预览冲突</Text>
+                </View>
+
+                {previewConflicts.length > 0 && (
+                  <View className={styles.conflictSection}>
+                  <Text className={styles.conflictTitle}>
+                    发现 {previewConflicts.length} 个时段冲突
+                  </Text>
+                  <ScrollView scrollY className={styles.conflictList}>
+                    {previewConflicts.map((conflict, idx) => (
+                      <View key={idx} className={styles.conflictItem}>
+                        <View className={styles.conflictHeader}>
+                          <Text className={styles.conflictDate}>{conflict.date}</Text>
+                          <Text className={styles.conflictTime}>
+                            {conflict.startTime} - {conflict.endTime}
+                          </Text>
+                        </View>
+                        <View className={styles.conflictDetail}>
+                          <Text className={styles.conflictLabel}>冲突预订：</Text>
+                          <Text className={styles.conflictValue}>
+                            {conflict.conflictWith.playerName} {conflict.conflictWith.startTime}-{conflict.conflictWith.endTime}
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
+                  </ScrollView>
+                  <Text style={{ fontSize: '22rpx', color: '#F53F3F', marginTop: '12rpx', display: 'block' }}>
+                    ⚠️ 冲突的时段将自动跳过，不会被修改
+                  </Text>
+                </View>
+                )}
+
+                <View className={styles.batchInfoRow}>
+                  <View className={styles.batchInfoItem}>
+                    <Text className={styles.batchInfoValue}>{futureBookingsCount}</Text>
+                    <Text className={styles.batchInfoLabel}>可调整预订</Text>
+                  </View>
+                  <View className={styles.batchInfoItem}>
+                    <Text className={styles.batchInfoValue}>{ruleBookings.length - futureBookingsCount}</Text>
+                    <Text className={styles.batchInfoLabel}>已结束（不改）</Text>
+                  </View>
+                  <View className={styles.batchInfoItem}>
+                    <Text className={styles.batchInfoValue}>{previewConflicts.length > 0 ? previewConflicts.length : '-'}</Text>
+                    <Text className={styles.batchInfoLabel}>预计冲突</Text>
+                  </View>
+                </View>
+
+                <Text style={{ fontSize: '22rpx', color: '#C9CDD4', marginTop: '12rpx', textAlign: 'center', display: 'block' }}>
+                  已完成、已取消的预订不会被修改
+                </Text>
+
+                <View className={styles.submitBtn} onClick={handleBatchSave}>
+                  <Text className={styles.submitBtnText}>确认批量调整</Text>
+                </View>
               </View>
-            </View>
+            ) : (
+              <View>
+                <View className={styles.resultHeader}>
+                  <Text className={styles.resultIcon}>✅</Text>
+                  <Text className={styles.resultTitle}>批量调整完成</Text>
+                </View>
 
-            <View className={styles.formItem}>
-              <View className={styles.switchRow} onClick={() => setBatchForm(prev => ({ ...prev, onlyFuture: !prev.onlyFuture }))}>
-                <Text className={styles.formLabel}>只调整未开始的预订</Text>
-                <View className={`${styles.switchBtn} ${batchForm.onlyFuture ? styles.on : ''}`}>
-                  <View className={styles.switchDot} />
+                <View className={styles.resultStats}>
+                  <View className={styles.resultStatItem}>
+                  <Text className={styles.resultStatValue} style={{ color: '#00B42A' }}>
+                    {batchResult?.updated || 0}
+                  </Text>
+                  <Text className={styles.resultStatLabel}>成功更新</Text>
+                </View>
+                <View className={styles.resultStatItem}>
+                  <Text className={styles.resultStatValue} style={{ color: '#FF7D00' }}>
+                    {batchResult?.skippedStatus || 0}
+                  </Text>
+                  <Text className={styles.resultStatLabel}>状态跳过</Text>
+                </View>
+                <View className={styles.resultStatItem}>
+                  <Text className={styles.resultStatValue} style={{ color: '#86909C' }}>
+                    {batchResult?.skippedPast || 0}
+                  </Text>
+                  <Text className={styles.resultStatLabel}>已过期</Text>
+                </View>
+                <View className={styles.resultStatItem}>
+                  <Text className={styles.resultStatValue} style={{ color: '#F53F3F' }}>
+                    {batchResult?.conflicts.length || 0}
+                  </Text>
+                  <Text className={styles.resultStatLabel}>时段冲突</Text>
                 </View>
               </View>
-              <Text style={{ fontSize: '22rpx', color: '#C9CDD4', marginTop: '8rpx', display: 'block' }}>
-                已完成、已取消和已过期的预订不会被修改
-              </Text>
-            </View>
 
-            <View className={styles.submitBtn} onClick={handleBatchSave}>
-              <Text className={styles.submitBtnText}>确认批量调整</Text>
-            </View>
+              {batchResult && batchResult.conflicts.length > 0 && (
+                <View className={styles.conflictSection}>
+                <Text className={styles.conflictTitle}>
+                  冲突详情（{batchResult.conflicts.length}条）
+                </Text>
+                <ScrollView scrollY className={styles.conflictList}>
+                  {batchResult.conflicts.map((conflict, idx) => (
+                    <View key={idx} className={styles.conflictItem}>
+                      <View className={styles.conflictHeader}>
+                        <Text className={styles.conflictDate}>{conflict.date}</Text>
+                        <Text className={styles.conflictTime}>
+                          {conflict.startTime} - {conflict.endTime}
+                        </Text>
+                      </View>
+                      <View className={styles.conflictDetail}>
+                        <Text className={styles.conflictLabel}>冲突：{conflict.conflictWith.playerName}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {showResult && (
+              <View className={styles.submitBtn} onClick={handleCloseBatch}>
+                <Text className={styles.submitBtnText}>完成</Text>
+              </View>
+            )}
           </View>
         </View>
       )}

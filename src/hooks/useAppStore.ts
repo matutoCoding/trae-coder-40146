@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { appStore } from '@/store/appStore';
+import { appStore, ConflictInfo, BatchUpdateResult } from '@/store/appStore';
 import { Booking, PeriodRule } from '@/types/booking';
 import { Bill } from '@/types/bill';
 import { Machine } from '@/types/machine';
@@ -66,9 +66,16 @@ export const useAppStore = () => {
   const updateBookingsByRule = useCallback((
     ruleId: string,
     updates: Partial<Booking>,
-    options?: { onlyFuture?: boolean; skipConflict?: boolean }
-  ) => {
+    options?: { onlyFuture?: boolean }
+  ): BatchUpdateResult => {
     return appStore.updateBookingsByRule(ruleId, updates, options);
+  }, []);
+
+  const previewConflictsForRule = useCallback((
+    ruleId: string,
+    updates: Partial<Booking>
+  ): ConflictInfo[] => {
+    return appStore.previewConflictsForRule(ruleId, updates);
   }, []);
 
   return {
@@ -86,6 +93,7 @@ export const useAppStore = () => {
     updateRule,
     checkConflict,
     getBookingsByRule,
-    updateBookingsByRule
+    updateBookingsByRule,
+    previewConflictsForRule
   };
 };

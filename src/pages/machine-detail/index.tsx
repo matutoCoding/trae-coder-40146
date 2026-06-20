@@ -1,20 +1,13 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import Taro, { useRouter, useDidShow } from '@tarojs/taro';
-import { Machine, MACHINE_STATUS_LABEL, MachineStatus } from '@/types/machine';
-import { Booking } from '@/types/booking';
+import { Machine, MACHINE_STATUS_LABEL } from '@/types/machine';
 import StatusTag from '@/components/StatusTag';
-import { formatDate, addDays, getWeekdayLabel, calculateHours } from '@/utils/date';
+import { formatDate, addDays, getWeekdayLabel, calculateHours, generateHalfHourSlots, HalfHourSlot } from '@/utils/date';
 import { useAppStore } from '@/hooks/useAppStore';
 import styles from './index.module.scss';
 
 type SlotStatus = 'available' | 'occupied' | 'selected';
-
-interface TimeSlot {
-  time: string;
-  status: SlotStatus;
-  bookingId?: string;
-}
 
 const MachineDetailPage: React.FC = () => {
   const router = useRouter();
@@ -32,79 +25,46 @@ const MachineDetailPage: React.FC = () => {
     console.log('[MachineDetail] 页面显示,镖机:', m?.name);
   });
 
-  const machineBookings: Booking[] = useMemo(() => {
-    return bookings.filter(b => b.machineId === machineId);
-  }, [bookings, machineId]);
+  const machineBookings = useMemo(() => {
+    return bookings.filter(b => b.machineId === machineId && b.date === selectedDate);
+  }, [bookings, machineId, selectedDate]);
 
-  const timeSlots = useMemo((): TimeSlot[] => {
-    const slots: TimeSlot[] = [];
-    const startHour = 10;
-    const endHour = 22;
-
-    if (machine?.status === 'maintenance') {
-      for (let hour = startHour; hour < endHour; hour++) {
-        const time = `${String(hour).padStart(2, '0')}:00`;
-        slots.push({ time, status: 'occupied' });
-      }
-      return slots;
+  const halfHourSlots = useMemo((): HalfHourSlot[] => {
+    if (!machine) return [];
+    if (machine.status === 'maintenance') {
+      return generateHalfHourSlots(10, 22, []).map(s => ({ ...s, occupied: true }));
     }
+    return generateHalfHourSlots(10, 22, machineBookings);
+  }, [machineBookings, machine]);
 
-    for (let hour = startHour; hour < endHour; hour++) {
-      const time = `${String(hour).padStart(2, '0')}:00`;
-      const nextHour = hour + 1;
-
-      const booking = machineBookings.find(
-        b =>
-          b.date === selectedDate &&
-          b.status !== 'cancelled' &&
-          parseInt(b.startTime) <= hour &&
-          parseInt(b.endTime) >= nextHour
-      );
-
-      const isSelected = selectedSlots.includes(time);
+  const timeSlotsWithStatus = useMemo(() => {
+    return halfHourSlots.map(slot => {
+      const isSelected = selectedSlots.includes(slot.time);
       let status: SlotStatus = 'available';
-      if (booking) {
+      if (slot.occupied) {
         status = 'occupied';
       } else if (isSelected) {
         status = 'selected';
       }
-
-      slots.push({
-        time,
-        status,
-        bookingId: booking?.id
-      });
-    }
-
-    return slots;
-  }, [machineBookings, selectedDate, selectedSlots, machine?.status]);
+      return { ...slot, status };
+    });
+  }, [halfHourSlots, selectedSlots]);
 
   const totalPrice = useMemo(() => {
     if (!machine) return '0.00';
-    return (selectedSlots.length * machine.pricePerHour).toFixed(2);
+    return (selectedSlots.length * 0.5 * machine.pricePerHour).toFixed(2);
   }, [machine, selectedSlots]);
 
-  const currentDisplayStatus: MachineStatus = useMemo(() => {
-    if (!machine) return 'idle';
-    if (machine.status === 'maintenance') return 'maintenance';
+  const currentDisplayStatus = useMemo(() => {
+    if (!machine) return 'idle' as const;
+    if (machine.status === 'maintenance') return 'maintenance' as const;
+    if (machine.status === 'occupied') return 'occupied' as const;
 
-    const now = new Date();
-    const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    const today = formatDate(now);
-    const currentHour = now.getHours();
-
-    const hasActiveBooking = machineBookings.some(
-      b =>
-        b.date === today &&
-        b.status !== 'cancelled' &&
-        parseInt(b.startTime) <= currentHour &&
-        parseInt(b.endTime) > currentHour
-    );
-
-    return hasActiveBooking ? 'occupied' : 'idle';
+    const hasBooking = machineBookings.length > 0;
+    return hasBooking ? 'occupied' : 'idle';
   }, [machine, machineBookings]);
 
-  const handleSlotClick = useCallback((slot: TimeSlot) => {
+  const handleSlotClick = useCallback((slot: HalfHourSlot & { status: SlotStatus }) => {
     if (slot.status === 'occupied') {
       Taro.showToast({
         title: '该时段已被占用',
@@ -157,12 +117,17 @@ const MachineDetailPage: React.FC = () => {
 
     const sortedSlots = [...selectedSlots].sort();
     const startTime = sortedSlots[0];
-    const lastHour = parseInt(sortedSlots[sortedSlots.length - 1]) + 1;
-    const endTime = `${String(lastHour).padStart(2, '0')}:00`;
+    const lastSlot = sortedSlots[sortedSlots.length - 1];
+    const lastHour = parseInt(lastSlot);
+    const lastMin = parseInt(lastSlot.split(':')[1]);
+    const endMin = lastMin + 30;
+    const endHour = lastHour + Math.floor(endMin / 60);
+    const finalMin = endMin % 60;
+    const endTime = `${String(endHour).padStart(2, '0')}:${String(finalMin).padStart(2, '0')}`;
     const hours = calculateHours(startTime, endTime);
     const originalAmount = hours * machine.pricePerHour;
 
-    const newBooking: Booking = {
+    const newBooking = {
       id: `b_${Date.now()}`,
       ruleId: '',
       machineId: machine.id,
@@ -172,12 +137,12 @@ const MachineDetailPage: React.FC = () => {
       endTime,
       playerName: '散客预订',
       playerPhone: '',
-      status: 'pending',
+      status: 'pending' as const,
       totalHours: hours,
       originalAmount,
       discountAmount: 0,
       finalAmount: originalAmount,
-      couponIds: [],
+      couponIds: [] as string[],
       createTime: formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss')
     };
 
@@ -198,7 +163,7 @@ const MachineDetailPage: React.FC = () => {
     }
   }, [selectedSlots, machine, selectedDate, addBookings]);
 
-  const getStatusType = (status: MachineStatus | string): 'success' | 'error' | 'warning' | 'info' => {
+  const getStatusType = (status: string): 'success' | 'error' | 'warning' | 'info' => {
     switch (status) {
       case 'idle':
         return 'success';
@@ -234,6 +199,7 @@ const MachineDetailPage: React.FC = () => {
         <StatusTag
           status={MACHINE_STATUS_LABEL[currentDisplayStatus]}
           type={getStatusType(currentDisplayStatus)}
+          size="sm"
         />
         <View className={styles.machineInfoRow}>
           <View className={styles.machineInfoItem}>
@@ -322,9 +288,9 @@ const MachineDetailPage: React.FC = () => {
         </View>
 
         <View className={styles.timeSlots}>
-          {timeSlots.map(slot => (
+          {timeSlotsWithStatus.map((slot, idx) => (
             <View
-              key={slot.time}
+              key={idx}
               className={`${styles.slotItem} ${styles[slot.status]}`}
               onClick={() => handleSlotClick(slot)}
             >
@@ -348,14 +314,16 @@ const MachineDetailPage: React.FC = () => {
             <Text className={styles.priceUnit}>/ 小时</Text>
           </View>
           <Text className={styles.descText}>
-            支持多种优惠叠加，新用户首单享8折优惠
+            支持半小时粒度预订，新用户首单享8折优惠
           </Text>
         </View>
       </View>
 
       <View className={styles.bottomBar}>
         <View className={styles.totalInfo}>
-          <Text className={styles.totalLabel}>已选 {selectedSlots.length} 小时</Text>
+          <Text className={styles.totalLabel}>
+            已选 {(selectedSlots.length * 0.5).toFixed(1)} 小时
+          </Text>
           <Text className={styles.totalPrice}>¥{totalPrice}</Text>
         </View>
         <View

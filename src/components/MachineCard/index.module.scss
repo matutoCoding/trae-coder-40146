@@ -123,3 +123,15 @@
   font-size: $font-size-xs;
   color: $color-text-tertiary;
 }
+
+.maintenanceTip {
+  padding: $spacing-sm $spacing-md;
+  background: rgba(255, 125, 0, 0.1);
+  border-radius: $radius-xs;
+  text-align: center;
+}
+
+.maintenanceTipText {
+  font-size: $font-size-xs;
+  color: #FF7D00;
+}

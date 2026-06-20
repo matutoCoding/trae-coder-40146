@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
 import { View, Text } from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import { Machine, MACHINE_STATUS_LABEL } from '@/types/machine';
+import { Machine, MACHINE_STATUS_LABEL, MachineStatus } from '@/types/machine';
 import { Booking } from '@/types/booking';
 import StatusTag from '@/components/StatusTag';
+import { generateHalfHourSlots } from '@/utils/date';
 import styles from './index.module.scss';
 
 export interface MachineCardProps {
@@ -27,40 +28,30 @@ const MachineCard: React.FC<MachineCardProps> = ({ machine, bookings = [], date,
     }
   };
 
-  const timeSlots = useMemo(() => {
+  const dateBookings = useMemo(() => {
+    if (!date) return [];
+    return bookings.filter(b => b.date === date);
+  }, [bookings, date]);
+
+  const halfHourSlots = useMemo(() => {
     if (!date || machine.status === 'maintenance') {
       return null;
     }
-
-    const startHour = 10;
-    const endHour = 22;
-    const totalHours = endHour - startHour;
-    const slots: { hour: number; occupied: boolean }[] = [];
-
-    for (let hour = startHour; hour < endHour; hour++) {
-      const nextHour = hour + 1;
-      const occupied = bookings.some(
-        b =>
-          b.date === date &&
-          b.status !== 'cancelled' &&
-          parseInt(b.startTime) <= hour &&
-          parseInt(b.endTime) >= nextHour
-      );
-      slots.push({ hour, occupied });
-    }
-
+    const slots = generateHalfHourSlots(10, 22, dateBookings);
     const occupiedCount = slots.filter(s => s.occupied).length;
-    const idleCount = totalHours - occupiedCount;
+    const totalCount = slots.length;
+    const occupiedHours = occupiedCount / 2;
+    const idleHours = (totalCount - occupiedCount) / 2;
+    return { slots, occupiedCount, totalCount, occupiedHours, idleHours };
+  }, [dateBookings, date, machine.status]);
 
-    return { slots, occupiedCount, idleCount, totalHours };
-  }, [bookings, date, machine.status]);
-
-  const displayStatus = useMemo(() => {
+  const displayStatus = useMemo((): MachineStatus => {
     if (machine.status === 'maintenance') return 'maintenance';
+    if (machine.status === 'occupied') return 'occupied';
     if (!date) return machine.status;
-    if (!timeSlots) return machine.status;
-    return timeSlots.occupiedCount > 0 ? 'occupied' : 'idle';
-  }, [machine.status, date, timeSlots]);
+    if (!halfHourSlots) return machine.status;
+    return halfHourSlots.occupiedCount > 0 ? 'occupied' : 'idle';
+  }, [machine.status, date, halfHourSlots]);
 
   const handleClick = () => {
     if (onClick) {
@@ -78,7 +69,7 @@ const MachineCard: React.FC<MachineCardProps> = ({ machine, bookings = [], date,
         <View className={styles.nameRow}>
           <Text className={styles.name}>{machine.name}</Text>
           <StatusTag
-            status={MACHINE_STATUS_LABEL[displayStatus as keyof typeof MACHINE_STATUS_LABEL] || machine.status}
+            status={MACHINE_STATUS_LABEL[displayStatus]}
             type={getStatusType(displayStatus)}
             size="sm"
           />
@@ -86,10 +77,10 @@ const MachineCard: React.FC<MachineCardProps> = ({ machine, bookings = [], date,
         <Text className={styles.code}>{machine.code} · {machine.model}</Text>
       </View>
 
-      {timeSlots && (
+      {halfHourSlots && (
         <View className={styles.slotOverview}>
           <View className={styles.slotBar}>
-            {timeSlots.slots.map((slot, idx) => (
+            {halfHourSlots.slots.map((slot, idx) => (
               <View
                 key={idx}
                 className={`${styles.slotBarItem} ${slot.occupied ? styles.occupied : styles.idle}`}
@@ -98,8 +89,16 @@ const MachineCard: React.FC<MachineCardProps> = ({ machine, bookings = [], date,
           </View>
           <View className={styles.slotLegend}>
             <Text className={styles.slotLegendText}>
-              空闲 {timeSlots.idleCount}h · 已约 {timeSlots.occupiedCount}h
+              空闲 {halfHourSlots.idleHours}h · 已约 {halfHourSlots.occupiedHours}h
             </Text>
+          </View>
+        </View>
+      )}
+
+      {machine.status === 'maintenance' && date && (
+        <View className={styles.slotOverview}>
+          <View className={styles.maintenanceTip}>
+            <Text className={styles.maintenanceTipText}>镖机维护中，全天不可预订</Text>
           </View>
         </View>
       )}

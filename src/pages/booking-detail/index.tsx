@@ -85,6 +85,17 @@ const BookingDetailPage: React.FC = () => {
   const endHourIndex = TIME_OPTIONS_HOUR.indexOf(editForm.endTime?.split(':')[0] || '21');
   const endMinIndex = TIME_OPTIONS_MINUTE.indexOf(editForm.endTime?.split(':')[1] || '00');
 
+  const conflictBooking = useMemo(() => {
+    if (!isEditing || !booking) return null;
+    return checkConflict(
+      editForm.machineId,
+      editForm.date,
+      editForm.startTime,
+      editForm.endTime,
+      booking.id
+    );
+  }, [isEditing, booking, editForm.machineId, editForm.date, editForm.startTime, editForm.endTime, checkConflict]);
+
   const getStatusText = (status: string) => {
     switch (status) {
       case 'confirmed':
@@ -140,19 +151,7 @@ const BookingDetailPage: React.FC = () => {
       return;
     }
 
-    const conflict = checkConflict(
-      editForm.machineId,
-      editForm.date,
-      editForm.startTime,
-      editForm.endTime,
-      booking.id
-    );
-    if (conflict) {
-      Taro.showModal({
-        title: '时段冲突',
-        content: `该镖机在 ${editForm.date} ${editForm.startTime}-${editForm.endTime} 已被占用`,
-        showCancel: false
-      });
+    if (conflictBooking) {
       return;
     }
 
@@ -185,7 +184,7 @@ const BookingDetailPage: React.FC = () => {
       title: '修改成功',
       icon: 'success'
     });
-  }, [booking, bookingId, editForm, updateBooking, checkConflict, getMachineById]);
+  }, [booking, bookingId, editForm, updateBooking, conflictBooking, getMachineById]);
 
   const handlePay = useCallback(() => {
     if (!booking) return;
@@ -434,6 +433,20 @@ const BookingDetailPage: React.FC = () => {
               </Text>
             </View>
 
+            {conflictBooking && (
+              <View className={styles.conflictWarning}>
+                <Text className={styles.conflictWarningIcon}>⚠️</Text>
+                <View className={styles.conflictWarningContent}>
+                  <Text className={styles.conflictWarningTitle}>时段冲突</Text>
+                  <Text className={styles.conflictWarningDesc}>
+                    {conflictBooking.machineName} 已被
+                    {conflictBooking.playerName} 预订
+                    ({conflictBooking.startTime}-{conflictBooking.endTime})
+                  </Text>
+                </View>
+              </View>
+            )}
+
             <View className={styles.adjustItem} onClick={handleSelectMachine}>
               <Text className={styles.adjustLabel}>镖机</Text>
               <Text
@@ -541,8 +554,10 @@ const BookingDetailPage: React.FC = () => {
             <View className={`${styles.btn} ${styles.secondary}`} onClick={() => setIsEditing(false)}>
               <Text className={styles.btnText}>取消</Text>
             </View>
-            <View className={`${styles.btn} ${styles.primary}`} onClick={handleSave}>
-              <Text className={styles.btnText}>保存修改</Text>
+            <View className={`${styles.btn} ${styles.primary} ${conflictBooking ? styles.disabled : ''}`} onClick={handleSave}>
+              <Text className={styles.btnText}>
+                {conflictBooking ? '时段冲突，无法保存' : '保存修改'}
+              </Text>
             </View>
           </>
         ) : (

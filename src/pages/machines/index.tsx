@@ -36,6 +36,10 @@ const MachinesPage: React.FC = () => {
         return { ...m, status: 'maintenance' as MachineStatus };
       }
 
+      if (m.status === 'occupied') {
+        return { ...m, status: 'occupied' as MachineStatus };
+      }
+
       const hasBooking = bookings.some(
         b =>
           b.machineId === m.id &&

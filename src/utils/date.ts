@@ -142,3 +142,48 @@ export const getRelativeDateLabel = (dateStr: string): string => {
   if (dateStr === tomorrow) return '明天';
   return getWeekdayLabel(dateStr);
 };
+
+export const parseTimeToMinutes = (timeStr: string): number => {
+  const cleaned = timeStr.replace(/[：]/g, ':').trim();
+  const parts = cleaned.split(':');
+  const hour = parseInt(parts[0]) || 0;
+  const min = parts.length > 1 ? parseInt(parts[1]) || 0 : 0;
+  return hour * 60 + min;
+};
+
+export interface HalfHourSlot {
+  time: string;
+  startMin: number;
+  endMin: number;
+  occupied: boolean;
+}
+
+export const generateHalfHourSlots = (
+  startHour: number,
+  endHour: number,
+  bookings: { startTime: string; endTime: string; status?: string }[],
+  options: { skipCancelled?: boolean } = {}
+): HalfHourSlot[] => {
+  const { skipCancelled = true } = options;
+  const slots: HalfHourSlot[] = [];
+  const validBookings = bookings.filter(b => !skipCancelled || b.status !== 'cancelled');
+
+  for (let hour = startHour; hour < endHour; hour++) {
+    for (let half = 0; half < 2; half++) {
+      const min = half * 30;
+      const startMin = hour * 60 + min;
+      const endMin = startMin + 30;
+      const time = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+
+      const occupied = validBookings.some(b => {
+        const bStart = parseTimeToMinutes(b.startTime);
+        const bEnd = parseTimeToMinutes(b.endTime);
+        return bStart < endMin && bEnd > startMin;
+      });
+
+      slots.push({ time, startMin, endMin, occupied });
+    }
+  }
+
+  return slots;
+};

@@ -511,3 +511,159 @@
     left: 48rpx;
   }
 }
+
+.previewBtn {
+  width: 100%;
+  height: 80rpx;
+  border-radius: $radius-md;
+  background: $color-bg-hover;
+  border: 2rpx dashed $color-primary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: $spacing-lg;
+
+  &:active {
+    opacity: 0.8;
+  }
+}
+
+.previewBtnText {
+  font-size: $font-size-md;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.conflictSection {
+  margin-bottom: $spacing-lg;
+  padding: $spacing-md;
+  background: #FFF0F0;
+  border-radius: $radius-md;
+}
+
+.conflictTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: #F53F3F;
+  margin-bottom: $spacing-sm;
+  display: block;
+}
+
+.conflictList {
+  max-height: 300rpx;
+}
+
+.conflictItem {
+  padding: $spacing-sm 0;
+  border-bottom: 2rpx solid rgba(245, 63, 63, 0.2);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.conflictHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.conflictDate {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.conflictTime {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.conflictDetail {
+  font-size: $font-size-xs;
+}
+
+.conflictLabel {
+  color: $color-text-tertiary;
+}
+
+.conflictValue {
+  color: #F53F3F;
+  font-weight: $font-weight-medium;
+}
+
+.batchInfoRow {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: $spacing-sm;
+  padding: $spacing-md 0;
+  background: $color-bg-page;
+  border-radius: $radius-md;
+}
+
+.batchInfoItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.batchInfoValue {
+  font-size: 48rpx;
+  font-weight: $font-weight-bold;
+  color: $color-primary;
+  line-height: 1;
+  margin-bottom: $spacing-xs;
+}
+
+.batchInfoLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.resultHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: $spacing-lg;
+}
+
+.resultIcon {
+  font-size: 96rpx;
+  margin-bottom: $spacing-md;
+}
+
+.resultTitle {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+}
+
+.resultStats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: $spacing-sm;
+  margin-bottom: $spacing-lg;
+}
+
+.resultStatItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: $spacing-md 0;
+  background: $color-bg-page;
+  border-radius: $radius-md;
+}
+
+.resultStatValue {
+  font-size: 44rpx;
+  font-weight: $font-weight-bold;
+  line-height: 1;
+  margin-bottom: $spacing-xs;
+}
+
+.resultStatLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
