@@ -32,23 +32,26 @@ const MachinesPage: React.FC = () => {
 
   const machinesWithRealtimeStatus: Machine[] = useMemo(() => {
     const now = new Date();
-    const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const currentHour = now.getHours();
     const today = formatDate(now);
 
     return machines.map(m => {
-      if (m.status !== 'active') return m;
+      if (m.status === 'maintenance') {
+        return { ...m, status: 'maintenance' as MachineStatus };
+      }
 
-      const activeBooking = bookings.find(b =>
-        b.machineId === m.id &&
-        b.date === currentDate &&
-        (b.status === 'confirmed' || b.status === 'pending' || b.status === 'completed') &&
-        b.startTime <= nowTime &&
-        b.endTime > nowTime
+      const hasActiveBooking = bookings.some(
+        b =>
+          b.machineId === m.id &&
+          b.date === today &&
+          (b.status === 'confirmed' || b.status === 'pending' || b.status === 'completed') &&
+          parseInt(b.startTime) <= currentHour &&
+          parseInt(b.endTime) > currentHour
       );
 
       return {
         ...m,
-        status: activeBooking ? 'occupied' : 'idle'
+        status: hasActiveBooking ? 'occupied' as MachineStatus : 'idle' as MachineStatus
       };
     });
   }, [machines, bookings, currentDate]);

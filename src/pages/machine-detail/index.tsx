@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import Taro, { useRouter, useDidShow } from '@tarojs/taro';
-import { Machine, MACHINE_STATUS_LABEL } from '@/types/machine';
+import { Machine, MACHINE_STATUS_LABEL, MachineStatus } from '@/types/machine';
 import { Booking } from '@/types/booking';
 import StatusTag from '@/components/StatusTag';
 import { formatDate, addDays, getWeekdayLabel, calculateHours } from '@/utils/date';
@@ -20,7 +20,7 @@ const MachineDetailPage: React.FC = () => {
   const router = useRouter();
   const machineId = router.params.id || 'm001';
   const initialDate = router.params.date || formatDate(new Date());
-  const { getMachineById, getBookingsByMachine, addBookings, bookings } = useAppStore();
+  const { getMachineById, bookings, addBookings } = useAppStore();
 
   const [machine, setMachine] = useState<Machine | null>(() => getMachineById(machineId));
   const [selectedDate, setSelectedDate] = useState<string>(initialDate);
@@ -41,14 +41,24 @@ const MachineDetailPage: React.FC = () => {
     const startHour = 10;
     const endHour = 22;
 
+    if (machine?.status === 'maintenance') {
+      for (let hour = startHour; hour < endHour; hour++) {
+        const time = `${String(hour).padStart(2, '0')}:00`;
+        slots.push({ time, status: 'occupied' });
+      }
+      return slots;
+    }
+
     for (let hour = startHour; hour < endHour; hour++) {
       const time = `${String(hour).padStart(2, '0')}:00`;
+      const nextHour = hour + 1;
+
       const booking = machineBookings.find(
         b =>
           b.date === selectedDate &&
           b.status !== 'cancelled' &&
           parseInt(b.startTime) <= hour &&
-          parseInt(b.endTime) > hour
+          parseInt(b.endTime) >= nextHour
       );
 
       const isSelected = selectedSlots.includes(time);
@@ -67,12 +77,32 @@ const MachineDetailPage: React.FC = () => {
     }
 
     return slots;
-  }, [machineBookings, selectedDate, selectedSlots]);
+  }, [machineBookings, selectedDate, selectedSlots, machine?.status]);
 
   const totalPrice = useMemo(() => {
     if (!machine) return '0.00';
     return (selectedSlots.length * machine.pricePerHour).toFixed(2);
   }, [machine, selectedSlots]);
+
+  const currentDisplayStatus: MachineStatus = useMemo(() => {
+    if (!machine) return 'idle';
+    if (machine.status === 'maintenance') return 'maintenance';
+
+    const now = new Date();
+    const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const today = formatDate(now);
+    const currentHour = now.getHours();
+
+    const hasActiveBooking = machineBookings.some(
+      b =>
+        b.date === today &&
+        b.status !== 'cancelled' &&
+        parseInt(b.startTime) <= currentHour &&
+        parseInt(b.endTime) > currentHour
+    );
+
+    return hasActiveBooking ? 'occupied' : 'idle';
+  }, [machine, machineBookings]);
 
   const handleSlotClick = useCallback((slot: TimeSlot) => {
     if (slot.status === 'occupied') {
@@ -117,6 +147,13 @@ const MachineDetailPage: React.FC = () => {
     }
 
     if (!machine) return;
+    if (machine.status === 'maintenance') {
+      Taro.showToast({
+        title: '镖机维护中，暂不可预订',
+        icon: 'none'
+      });
+      return;
+    }
 
     const sortedSlots = [...selectedSlots].sort();
     const startTime = sortedSlots[0];
@@ -161,7 +198,7 @@ const MachineDetailPage: React.FC = () => {
     }
   }, [selectedSlots, machine, selectedDate, addBookings]);
 
-  const getStatusType = (status: string) => {
+  const getStatusType = (status: MachineStatus | string): 'success' | 'error' | 'warning' | 'info' => {
     switch (status) {
       case 'idle':
         return 'success';
@@ -177,20 +214,15 @@ const MachineDetailPage: React.FC = () => {
   if (!machine) {
     return (
       <View className={styles.page}>
-        <Text>加载中...</Text>
+        <View style={{ padding: '100rpx', textAlign: 'center' }}>
+          <Text style={{ fontSize: '48rpx' }}>🎯</Text>
+          <Text style={{ fontSize: '28rpx', color: '#86909C', marginTop: '24rpx', display: 'block' }}>
+            加载中...
+          </Text>
+        </View>
       </View>
     );
   }
-
-  const now = new Date();
-  const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  const today = formatDate(now);
-  const activeBooking = machineBookings.find(
-    b => b.date === today && b.status !== 'cancelled' && b.startTime <= nowTime && b.endTime > nowTime
-  );
-  const displayStatus = machine.status === 'active'
-    ? (activeBooking ? 'occupied' : 'idle')
-    : machine.status;
 
   return (
     <ScrollView scrollY className={styles.page}>
@@ -200,8 +232,8 @@ const MachineDetailPage: React.FC = () => {
           {machine.code} · {machine.model}
         </Text>
         <StatusTag
-          status={MACHINE_STATUS_LABEL[displayStatus]}
-          type={getStatusType(displayStatus)}
+          status={MACHINE_STATUS_LABEL[currentDisplayStatus]}
+          type={getStatusType(currentDisplayStatus)}
         />
         <View className={styles.machineInfoRow}>
           <View className={styles.machineInfoItem}>
@@ -300,6 +332,12 @@ const MachineDetailPage: React.FC = () => {
             </View>
           ))}
         </View>
+
+        {machine.status === 'maintenance' && (
+          <Text style={{ fontSize: '24rpx', color: '#FF7D00', marginTop: '16rpx', textAlign: 'center', display: 'block' }}>
+            镖机维护中，所有时段暂不可预订
+          </Text>
+        )}
       </View>
 
       <View className={styles.section}>
@@ -320,8 +358,13 @@ const MachineDetailPage: React.FC = () => {
           <Text className={styles.totalLabel}>已选 {selectedSlots.length} 小时</Text>
           <Text className={styles.totalPrice}>¥{totalPrice}</Text>
         </View>
-        <View className={styles.bookBtn} onClick={handleBook}>
-          <Text className={styles.bookBtnText}>立即预订</Text>
+        <View
+          className={`${styles.bookBtn} ${machine.status === 'maintenance' ? styles.disabled : ''}`}
+          onClick={handleBook}
+        >
+          <Text className={styles.bookBtnText}>
+            {machine.status === 'maintenance' ? '维护中' : '立即预订'}
+          </Text>
         </View>
       </View>
     </ScrollView>
